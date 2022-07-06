@@ -3,13 +3,11 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	"google.golang.org/appengine/log"
 )
 
 type Logger interface {
@@ -106,7 +104,7 @@ func NewTerminalLogger() Logger {
 }
 
 func (logger *TerminalLogger) Log(state ControllerState) {
-	logrus.Infof("%+v", state)
+	logrus.Infoln(&state)
 }
 
 func (logger *TerminalLogger) Close() error {
@@ -122,7 +120,12 @@ func NewSMSLogger(dest []string) Logger {
 }
 
 func (logger *SMSLogger) Log(state ControllerState) {
-	exec.Command("termux-sms-send", "-n", logger.dest, fmt.Sprintf
+	cmd := exec.Command("termux-sms-send", "-n", logger.dest, state.String())
+	err := cmd.Run()
+	if err != nil {
+		logrus.Warnf("failed to log as sms to %s: %v", logger.dest, err)
+		return
+	}
 }
 
 func (logger *SMSLogger) Close() error {
