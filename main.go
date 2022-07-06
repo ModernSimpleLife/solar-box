@@ -10,6 +10,7 @@ import (
 const (
 	// UpdateInterval defines the delay between updates from the charge controller
 	UpdateInterval = time.Second * 30
+	SMSLoggerInterval = time.Minute * 30
 )
 
 func main() {
@@ -28,7 +29,7 @@ func main() {
 	loggers := []Logger{
 		csvLogger,
 		NewTerminalLogger(),
-		NewSMSLogger(phoneNumbers),
+		NewSMSLogger(phoneNumbers, SMSLoggerInterval),
 	}
 
 	defer func() {

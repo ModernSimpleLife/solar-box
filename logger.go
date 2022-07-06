@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -112,14 +113,25 @@ func (logger *TerminalLogger) Close() error {
 }
 
 type SMSLogger struct {
-	dest string
+	dest       string
+	lastSentAt time.Time
+	interval   time.Duration
 }
 
-func NewSMSLogger(dest []string) Logger {
-	return &SMSLogger{dest: strings.Join(dest, ",")}
+func NewSMSLogger(dest []string, interval time.Duration) Logger {
+	return &SMSLogger{
+		dest:     strings.Join(dest, ","),
+		interval: interval,
+	}
 }
 
 func (logger *SMSLogger) Log(state ControllerState) {
+	now := time.Now()
+	if now.Sub(logger.lastSentAt) <= logger.interval {
+		return
+	}
+
+	logger.lastSentAt = now
 	cmd := exec.Command("termux-sms-send", "-n", logger.dest, state.String())
 	err := cmd.Run()
 	if err != nil {
