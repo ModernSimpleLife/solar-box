@@ -9,18 +9,16 @@ import (
 
 const (
 	// UpdateInterval defines the delay between updates from the charge controller
-	UpdateInterval = time.Minute
+	UpdateInterval    = time.Minute
 	SMSLoggerInterval = time.Minute * 30
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		logrus.Fatalf("usage: %s <csv_path> [phone number 1] [phone number 2]...", os.Args[0])
+	if len(os.Args) != 2 {
+		logrus.Fatalf("usage: %s <csv_path>", os.Args[0])
 	}
 
 	csvPath := os.Args[1]
-	phoneNumbers := os.Args[2:]
-
 	csvLogger, err := NewCSVLogger(csvPath)
 	if err != nil {
 		logrus.Fatal(err)
@@ -29,7 +27,6 @@ func main() {
 	loggers := []Logger{
 		csvLogger,
 		NewTerminalLogger(),
-		NewSMSLogger(phoneNumbers, SMSLoggerInterval),
 	}
 
 	defer func() {
@@ -43,16 +40,24 @@ func main() {
 		logrus.Fatal(err)
 	}
 
-	for range time.Tick(UpdateInterval) {
-		err = controller.Update()
-		if err != nil {
-			logrus.Warnf("failed to update controller's state: %v", err)
-			continue
-		}
+	interval := time.Tick(UpdateInterval)
+	requester := NewSMSRequester()
 
-		state := controller.State()
-		for _, logger := range loggers {
-			logger.Log(state)
+	for {
+		select {
+		case <-interval:
+			err = controller.Update()
+			if err != nil {
+				logrus.Warnf("failed to update controller's state: %v", err)
+				continue
+			}
+
+			state := controller.State()
+			for _, logger := range loggers {
+				logger.Log(state)
+			}
+		case respond := <-requester.C:
+			respond(controller.State())
 		}
 	}
 }
