@@ -9,25 +9,36 @@ import (
 
 type ControllerState struct {
 	// Temperature retrieves the current charge controller's temperature in Celsius
-	Temperature float64 `csv:"temperature_in_celsius"`
+	Temperature float64
 
 	// PVVoltage retrieves the current Photovoltaic's voltage
-	PVVoltage float64 `csv:"pv_voltage"`
+	PVVoltage float64
 
 	// PVCurrent retrieves the current Photovoltaic's current in amps
-	PVCurrent float64 `csv:"pv_current_in_amps"`
+	PVCurrent float64
 
 	// PVPower retrieves the current Photovoltaic's charging power in watts
-	PVPower float64 `csv:"pv_power_in_watts"`
+	PVPower float64
 
 	// BatteryVoltage retrieves the current battery's voltage
-	BatteryVoltage float64 `csv:"battery_voltage"`
+	BatteryVoltage float64
 
 	// BatterySOC retrieves the battery's state of charge in percentage
-	BatterySOC float64 `csv:"battery_soc_in_percentage"`
+	BatterySOC float64
 
 	// ChargingCurrent retrieves the amount amps go to the battery
-	ChargingCurrent float64 `csv:"charging_current_in_amps"`
+	ChargingCurrent float64
+}
+
+func (state *ControllerState) String() string {
+	return fmt.Sprintf("temp=%.2f°C,pv_voltage=%.2fV,pv_current=%.2fA,pv_power=%.2fW,batt_voltage=%.2fV,batt_soc=%.2f%%,charging_current=%.2fA",
+		state.Temperature, state.PVVoltage, state.PVCurrent, state.PVPower, state.BatteryVoltage, state.BatterySOC, state.ChargingCurrent)
+}
+
+type Controller interface {
+	Close() error
+	State() ControllerState
+	Update() error
 }
 
 type RenogyController struct {
@@ -73,37 +84,37 @@ func (controller *RenogyController) Update() error {
 	var err error
 	newState := controller.state
 
-	newState.BatterySOC, err = controller.BatterySOC() 
+	newState.BatterySOC, err = controller.BatterySOC()
 	if err != nil {
 		return err
 	}
 
-	newState.BatteryVoltage, err = controller.BatteryVoltage() 
+	newState.BatteryVoltage, err = controller.BatteryVoltage()
 	if err != nil {
 		return err
 	}
 
-	newState.ChargingCurrent, err = controller.ChargingCurrent() 
+	newState.ChargingCurrent, err = controller.ChargingCurrent()
 	if err != nil {
 		return err
 	}
 
-	newState.PVCurrent, err = controller.PVCurrent() 
+	newState.PVCurrent, err = controller.PVCurrent()
 	if err != nil {
 		return err
 	}
 
-	newState.PVVoltage, err = controller.PVVoltage() 
+	newState.PVVoltage, err = controller.PVVoltage()
 	if err != nil {
 		return err
 	}
 
-	newState.PVPower, err = controller.PVPower() 
+	newState.PVPower, err = controller.PVPower()
 	if err != nil {
 		return err
 	}
 
-	newState.Temperature, err = controller.Temperature() 
+	newState.Temperature, err = controller.Temperature()
 	if err != nil {
 		return err
 	}
