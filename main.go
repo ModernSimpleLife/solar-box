@@ -9,7 +9,7 @@ import (
 
 const (
 	// UpdateInterval defines the delay between updates from the charge controller
-	UpdateInterval = time.Second * 30
+	UpdateInterval = time.Minute
 	SMSLoggerInterval = time.Minute * 30
 )
 

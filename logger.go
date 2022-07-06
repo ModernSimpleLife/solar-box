@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -36,7 +37,7 @@ type CSVLogger struct {
 
 func NewCSVLogger(path string) (Logger, error) {
 	var file *os.File
-	var records [][]string
+	var records []string
 	var err error
 
 	defer func() {
@@ -51,20 +52,27 @@ func NewCSVLogger(path string) (Logger, error) {
 	}
 
 	csvReader := csv.NewReader(file)
-	records, err = csvReader.ReadAll()
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse %s as csv: %v", path, err)
-	}
-
 	csvWriter := csv.NewWriter(file)
-	// No header yet, create one
-	if len(records) == 0 {
-		err = csvWriter.Write(csvHeaders)
-		if err != nil {
-			return nil, fmt.Errorf("failed to write csv headers: %v", err)
+	records, err = csvReader.Read()
+	if err != nil {
+		if err != io.EOF {
+			return nil, fmt.Errorf("failed to parse %s as csv: %v", path, err)
 		}
 
-		csvWriter.Flush()
+		// No header yet, create one
+		if len(records) == 0 {
+			err = csvWriter.Write(csvHeaders)
+			if err != nil {
+				return nil, fmt.Errorf("failed to write csv headers: %v", err)
+			}
+
+			csvWriter.Flush()
+		}
+	} else {
+		_, err = file.Seek(0, os.SEEK_END)
+		if err != nil {
+			return nil, fmt.Errorf("failed to seek to the end of the file: %v", err)
+		}
 	}
 
 	logger := CSVLogger{
