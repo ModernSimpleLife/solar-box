@@ -8,11 +8,12 @@
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
 
-#define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
 #define PROJECT_NAME "solar-charge-controller"
 #define RS232_TX_PIN 35
 #define RS232_RX_PIN 34
+#define BATTERY_SERVICE_UUID BLEUUID((uint16_t)0x180F)
+#define BATTERY_CHARACTERISTIC_UUID BLEUUID((uint16_t)0x2A19)
+#define BATTERY_DESCRIPTOR_UUID BLEUUID((uint16_t)0x2901))
 
 /* BLEServer *pServer = BLEDevice::createServer();
 BLEService *pService = pServer->createService(SERVICE_UUID);
@@ -34,14 +35,14 @@ void setupBluetooth()
 
     BLEDevice::init(PROJECT_NAME);
     pServer = BLEDevice::createServer();
-    pService = pServer->createService(SERVICE_UUID);
+    pService = pServer->createService(BATTERY_SERVICE_UUID);
     pBatterySOC = pService->createCharacteristic(
-        CHARACTERISTIC_UUID,
-        BLECharacteristic::PROPERTY_READ);
+        BATTERY_CHARACTERISTIC_UUID,
+        BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
     pService->start();
 
     BLEAdvertising *pAdvertising = pServer->getAdvertising();
-    pAdvertising->addServiceUUID(SERVICE_UUID);
+    pAdvertising->addServiceUUID(BATTERY_SERVICE_UUID);
     pAdvertising->setScanResponse(true);
     pAdvertising->setMinPreferred(0x06);
     pAdvertising->start();
