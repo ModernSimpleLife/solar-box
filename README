@@ -1,4 +1,9 @@
 ## Reference
 
-* Cable selection: https://renogy.boards.net/thread/535/using-rj11-cable-connect-raspberry
-* https://diysolarforum.com/threads/off-grid-solar-battery-monitoring-and-control-freeware.6662/page-11
+- Cable selection: https://renogy.boards.net/thread/535/using-rj11-cable-connect-raspberry
+- https://diysolarforum.com/threads/off-grid-solar-battery-monitoring-and-control-freeware.6662/page-11
+- Arduino UART: https://www.circuitbasics.com/how-to-set-up-uart-communication-for-arduino/
+- Arduino Modbus: https://github.com/4-20ma/ModbusMaster
+- ESP32 Bluetooth Reference: https://github.com/nkolban/esp32-snippets/blob/master/Documentation/BLE%20C%2B%2B%20Guide.pdf
+- ESP32 deep sleep: https://randomnerdtutorials.com/esp32-timer-wake-up-deep-sleep/
+- ESP32 BLE server: https://www.electronicshub.org/esp32-ble-tutorial/
