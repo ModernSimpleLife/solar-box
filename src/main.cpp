@@ -7,17 +7,33 @@
 #include <ModbusMaster.h>
 
 #define PROJECT_NAME "Solar Box"
-#define RS232_TX_PIN 35
-#define RS232_RX_PIN 34
+#define RS232_TX_PIN 1
+#define RS232_RX_PIN 3
 #define BATTERY_SERVICE_UUID BLEUUID((uint16_t)0x180F)
 #define BATTERY_CHARACTERISTIC_UUID BLEUUID((uint16_t)0x2A19)
-#define BATTERY_DESCRIPTOR_UUID BLEUUID((uint16_t)0x2901))
+#define BATTERY_DESCRIPTOR_UUID BLEUUID((uint16_t)0x2901)
 
 BLEServer *pServer;
 BLEService *pService;
 BLECharacteristic *pBatterySOC;
 BLEDescriptor batteryLevelDescriptor(BATTERY_DESCRIPTOR_UUID);
 ModbusMaster node;
+
+class SolarBLECallbacks : BLEServerCallbacks
+{
+
+    virtual void onConnect(BLEServer *pServer)
+    {
+        Serial.println("Client got connected");
+    }
+
+    virtual void onDisconnect(BLEServer *pServer)
+    {
+        Serial.println("Client got disconnected");
+    }
+};
+
+SolarBLECallbacks bleCallbacks;
 
 void setupBluetooth()
 {
@@ -36,6 +52,7 @@ void setupBluetooth()
     pBatterySOC->addDescriptor(new BLE2902());
 
     pService->addCharacteristic(pBatterySOC);
+    pServer->setCallbacks((BLEServerCallbacks *)&bleCallbacks);
     pServer->getAdvertising()->addServiceUUID(BATTERY_SERVICE_UUID);
     pService->start();
     // Start advertising
@@ -50,6 +67,8 @@ void setupRS232()
 
 void setup()
 {
+    Serial.begin(115200);
+    Serial.println("Starting solar charge monitor");
     setupRS232();
     setupBluetooth();
 }
@@ -63,8 +82,13 @@ void loop()
     if (result == node.ku8MBSuccess)
     {
         data = node.getResponseBuffer(0);
+        Serial.printf("Current battery SOC is %u%%\n", data);
         pBatterySOC->setValue(data);
         pBatterySOC->notify();
+    }
+    else
+    {
+        Serial.println("failed to get the current battery SOC");
     }
 
     delay(5000);
