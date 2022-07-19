@@ -92,7 +92,7 @@ uint16_t voltageToSOC(uint16_t voltage)
         {100, 0},
     };
     static size_t socTableLength = sizeof(socTable) / sizeof(socTable[0]);
-    for (size_t i = 1; i < socTableLength; i++)
+    for (size_t i = 0; i < socTableLength; i++)
     {
         if (voltage >= socTable[i][0])
         {
