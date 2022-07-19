@@ -7,8 +7,8 @@
 #include <ModbusMaster.h>
 
 #define PROJECT_NAME "Solar Box"
-#define RS232_TX_PIN 1
-#define RS232_RX_PIN 3
+#define RS232_TX_PIN 17
+#define RS232_RX_PIN 16
 #define BATTERY_SERVICE_UUID BLEUUID((uint16_t)0x180F)
 #define BATTERY_CHARACTERISTIC_UUID BLEUUID((uint16_t)0x2A19)
 #define BATTERY_DESCRIPTOR_UUID BLEUUID((uint16_t)0x2901)
@@ -53,37 +53,68 @@ void setupBluetooth()
 
     pService->addCharacteristic(pBatterySOC);
     pServer->setCallbacks((BLEServerCallbacks *)&bleCallbacks);
-    pServer->getAdvertising()->addServiceUUID(BATTERY_SERVICE_UUID);
     pService->start();
-    // Start advertising
-    pServer->getAdvertising()->start();
+
+    BLEAdvertising *pAdvertising = pServer->getAdvertising();
+    pAdvertising->addServiceUUID(BATTERY_SERVICE_UUID);
+    pAdvertising->setScanResponse(true);
+    pAdvertising->setMinPreferred(0x06);
+    pAdvertising->start();
 }
 
 void setupRS232()
 {
-    Serial1.begin(9600, SERIAL_8N1, RS232_RX_PIN, RS232_TX_PIN);
-    node.begin(2, Serial1);
+    Serial2.begin(9600, SERIAL_8N1, RS232_RX_PIN, RS232_TX_PIN);
+    node.begin(1, Serial2);
 }
 
 void setup()
 {
-    Serial.begin(115200);
-    Serial.println("Starting solar charge monitor");
+    Serial.begin(9600);
     setupRS232();
     setupBluetooth();
+    Serial.println("Starting solar charge monitor");
+}
+
+uint16_t voltageToSOC(uint16_t voltage)
+{
+    static uint16_t socTable[][2] = {
+        {136, 100},
+        {134, 99},
+        {133, 90},
+        {132, 70},
+        {131, 40},
+        {130, 30},
+        {129, 20},
+        {128, 17},
+        {125, 14},
+        {120, 9},
+        {100, 0},
+    };
+    static size_t socTableLength = sizeof(socTable) / sizeof(socTable[0]);
+    for (size_t i = 1; i < socTableLength; i++)
+    {
+        if (voltage >= socTable[i][0])
+        {
+            return socTable[i][1];
+        }
+    }
+
+    return 0;
 }
 
 void loop()
 {
     uint8_t result;
-    uint16_t data;
+    uint16_t soc;
 
-    result = node.readHoldingRegisters(0x100, 2);
+    Serial.println("Looping");
+    result = node.readHoldingRegisters(0x101, 2);
     if (result == node.ku8MBSuccess)
     {
-        data = node.getResponseBuffer(0);
-        Serial.printf("Current battery SOC is %u%%\n", data);
-        pBatterySOC->setValue(data);
+        soc = voltageToSOC(node.getResponseBuffer(0));
+        Serial.printf("Current battery SOC is %u%%\n", soc);
+        pBatterySOC->setValue(soc);
         pBatterySOC->notify();
     }
     else
