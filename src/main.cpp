@@ -7,8 +7,18 @@
 #include <ModbusMaster.h>
 
 #define PROJECT_NAME "Solar Box"
-#define RS232_TX_PIN 17
-#define RS232_RX_PIN 16
+#define RS232_TX_PIN 1
+#define RS232_RX_PIN 3
+#define RELAY_PIN 16
+
+class TriggerCallback : public BLECharacteristicCallbacks
+{
+    virtual void onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_param_t *param)
+    {
+        bool triggerOn = *(bool *)pCharacteristic->getData();
+        digitalWrite(RELAY_PIN, triggerOn ? HIGH : LOW);
+    }
+};
 
 class SolarBox : public BLEServerCallbacks
 {
@@ -27,9 +37,13 @@ private:
 
     BLEService *pTriggerService;
     BLECharacteristic *pTriggerLoadCharacteristic;
+    TriggerCallback triggerCallback;
 
     SolarBox()
     {
+        pinMode(RELAY_PIN, OUTPUT);
+
+        // Init rs232 and modbus
         Serial2.begin(9600, SERIAL_8N1, RS232_RX_PIN, RS232_TX_PIN);
         node.begin(1, Serial2);
 
@@ -82,6 +96,7 @@ public:
                                                                                              BLECharacteristic::PROPERTY_WRITE |
                                                                                                  BLECharacteristic::PROPERTY_READ |
                                                                                                  BLECharacteristic::PROPERTY_NOTIFY);
+        instance.pTriggerLoadCharacteristic->setCallbacks(&instance.triggerCallback);
         instance.pTriggerService->addCharacteristic(instance.pTriggerLoadCharacteristic);
         instance.pTriggerService->start();
 
@@ -147,14 +162,9 @@ public:
     }
 };
 
-void setupRS232()
-{
-}
-
 void setup()
 {
     Serial.begin(9600);
-    setupRS232();
     Serial.println("Starting solar charge monitor");
 }
 
@@ -187,25 +197,8 @@ uint16_t voltageToSOC(uint16_t voltage)
 
 void loop()
 {
-    uint8_t result;
-    uint16_t soc;
     SolarBox &solarBox = SolarBox::getInstance();
 
-    if (solarBox.connected())
-    {
-        result = node.readHoldingRegisters(0x101, 2);
-        if (result == node.ku8MBSuccess)
-        {
-            soc = voltageToSOC(node.getResponseBuffer(0));
-            Serial.printf("Current battery SOC is %u%%\n", soc);
-            pBatterySOC->setValue(soc);
-            pBatterySOC->notify();
-        }
-        else
-        {
-            Serial.println("failed to get the current battery SOC");
-        }
-    }
-
+    solarBox.update();
     delay(1000);
 }
