@@ -18,17 +18,21 @@ BLEService *pService;
 BLECharacteristic *pBatterySOC;
 BLEDescriptor batteryLevelDescriptor(BATTERY_DESCRIPTOR_UUID);
 ModbusMaster node;
+bool clientConnected = false;
 
 class SolarBLECallbacks : BLEServerCallbacks
 {
 
     virtual void onConnect(BLEServer *pServer)
     {
+        clientConnected = true;
+        pServer->startAdvertising();
         Serial.println("Client got connected");
     }
 
     virtual void onDisconnect(BLEServer *pServer)
     {
+        clientConnected = false;
         Serial.println("Client got disconnected");
     }
 };
@@ -108,19 +112,21 @@ void loop()
     uint8_t result;
     uint16_t soc;
 
-    Serial.println("Looping");
-    result = node.readHoldingRegisters(0x101, 2);
-    if (result == node.ku8MBSuccess)
+    if (clientConnected)
     {
-        soc = voltageToSOC(node.getResponseBuffer(0));
-        Serial.printf("Current battery SOC is %u%%\n", soc);
-        pBatterySOC->setValue(soc);
-        pBatterySOC->notify();
-    }
-    else
-    {
-        Serial.println("failed to get the current battery SOC");
+        result = node.readHoldingRegisters(0x101, 2);
+        if (result == node.ku8MBSuccess)
+        {
+            soc = voltageToSOC(node.getResponseBuffer(0));
+            Serial.printf("Current battery SOC is %u%%\n", soc);
+            pBatterySOC->setValue(soc);
+            pBatterySOC->notify();
+        }
+        else
+        {
+            Serial.println("failed to get the current battery SOC");
+        }
     }
 
-    delay(5000);
+    delay(1000);
 }
