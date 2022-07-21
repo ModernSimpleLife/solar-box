@@ -9,74 +9,152 @@
 #define PROJECT_NAME "Solar Box"
 #define RS232_TX_PIN 17
 #define RS232_RX_PIN 16
-#define BATTERY_SERVICE_UUID BLEUUID((uint16_t)0x180F)
-#define BATTERY_CHARACTERISTIC_UUID BLEUUID((uint16_t)0x2A19)
-#define BATTERY_DESCRIPTOR_UUID BLEUUID((uint16_t)0x2901)
 
-BLEServer *pServer;
-BLEService *pService;
-BLECharacteristic *pBatterySOC;
-BLEDescriptor batteryLevelDescriptor(BATTERY_DESCRIPTOR_UUID);
-ModbusMaster node;
-bool clientConnected = false;
-
-class SolarBLECallbacks : BLEServerCallbacks
+class SolarBox : public BLEServerCallbacks
 {
+private:
+    BLEServer *pServer;
+    bool clientConnected = false;
+    ModbusMaster node;
+
+    BLEService *pBatteryService;
+    BLECharacteristic *pBatteryLevelCharacteristic;
+
+    BLEService *pPVService;
+    BLECharacteristic *pPVVoltageCharacteristic;
+    BLECharacteristic *pPVCurrentCharacteristic;
+    BLECharacteristic *pPVPowerCharacteristic;
+
+    BLEService *pTriggerService;
+    BLECharacteristic *pTriggerLoadCharacteristic;
+
+    SolarBox()
+    {
+        Serial2.begin(9600, SERIAL_8N1, RS232_RX_PIN, RS232_TX_PIN);
+        node.begin(1, Serial2);
+
+        BLEDevice::init(PROJECT_NAME);
+    }
+
+public:
+    static SolarBox &
+    getInstance()
+    {
+        static bool initialized = false;
+        static SolarBox instance;
+        BLECharacteristic *pCharacteristic;
+
+        if (initialized)
+        {
+            return instance;
+        }
+
+        instance.pServer = BLEDevice::createServer();
+        instance.pServer->setCallbacks(&instance);
+
+        // Init battery service
+        instance.pBatteryService = instance.pServer->createService(BLEUUID((uint16_t)0x180F));
+        instance.pBatteryLevelCharacteristic = instance.pBatteryService->createCharacteristic(BLEUUID((uint16_t)0x2A19),
+                                                                                              BLECharacteristic::PROPERTY_READ |
+                                                                                                  BLECharacteristic::PROPERTY_NOTIFY);
+        instance.pBatteryService->addCharacteristic(instance.pBatteryLevelCharacteristic);
+        instance.pBatteryService->start();
+
+        // Init PV service
+        instance.pPVService = instance.pServer->createService(BLEUUID("b871a2ee-1651-47ac-a22c-e340d834c1ef"));
+        instance.pPVVoltageCharacteristic = instance.pPVService->createCharacteristic(BLEUUID("46e98325-92b7-4e5f-84c9-8edcbd9338db"),
+                                                                                      BLECharacteristic::PROPERTY_READ |
+                                                                                          BLECharacteristic::PROPERTY_NOTIFY);
+        instance.pPVCurrentCharacteristic = instance.pPVService->createCharacteristic(BLEUUID("91b3d4db-550b-464f-8127-16eeb209dd1d"),
+                                                                                      BLECharacteristic::PROPERTY_READ |
+                                                                                          BLECharacteristic::PROPERTY_NOTIFY);
+        instance.pPVPowerCharacteristic = instance.pPVService->createCharacteristic(BLEUUID("2c85bbb9-0e1a-4bbb-8315-f7cc29831515"),
+                                                                                    BLECharacteristic::PROPERTY_READ |
+                                                                                        BLECharacteristic::PROPERTY_NOTIFY);
+        instance.pPVService->addCharacteristic(instance.pPVVoltageCharacteristic);
+        instance.pPVService->addCharacteristic(instance.pPVCurrentCharacteristic);
+        instance.pPVService->addCharacteristic(instance.pPVPowerCharacteristic);
+        instance.pPVService->start();
+
+        // Init trigger service to take inputs from clients
+        instance.pTriggerService = instance.pServer->createService(BLEUUID("385cc70e-8a8c-4827-abc0-d01385aa0574"));
+        instance.pTriggerLoadCharacteristic = instance.pTriggerService->createCharacteristic(BLEUUID("287651ed-3fda-42f4-92c6-7aaca7da634c"),
+                                                                                             BLECharacteristic::PROPERTY_WRITE |
+                                                                                                 BLECharacteristic::PROPERTY_READ |
+                                                                                                 BLECharacteristic::PROPERTY_NOTIFY);
+        instance.pTriggerService->addCharacteristic(instance.pTriggerLoadCharacteristic);
+        instance.pTriggerService->start();
+
+        BLEAdvertising *pAdvertising = instance.pServer->getAdvertising();
+        pAdvertising->addServiceUUID(instance.pBatteryService->getUUID());
+        pAdvertising->addServiceUUID(instance.pPVService->getUUID());
+        pAdvertising->setScanResponse(true);
+        pAdvertising->setMinPreferred(0x06);
+        pAdvertising->start();
+    }
 
     virtual void onConnect(BLEServer *pServer)
     {
-        clientConnected = true;
+        this->clientConnected = true;
         pServer->startAdvertising();
         Serial.println("Client got connected");
     }
 
     virtual void onDisconnect(BLEServer *pServer)
     {
-        clientConnected = false;
+        this->clientConnected = false;
         Serial.println("Client got disconnected");
+    }
+
+    void update()
+    {
+        uint8_t result;
+        uint16_t value;
+
+        if (!this->clientConnected)
+        {
+            return;
+        }
+
+        // Battery Voltage
+        result = node.readHoldingRegisters(0x101, 2);
+        if (result == node.ku8MBSuccess)
+        {
+            value = voltageToSOC(node.getResponseBuffer(0));
+            this->pBatteryLevelCharacteristic->setValue(value);
+            this->pBatteryLevelCharacteristic->notify();
+        }
+
+        // PV Voltage
+        result = node.readHoldingRegisters(0x107, 2);
+        if (result == node.ku8MBSuccess)
+        {
+            value = node.getResponseBuffer(0);
+            float voltage = static_cast<float>(value) * 0.1;
+            this->pPVVoltageCharacteristic->setValue(voltage);
+            this->pPVVoltageCharacteristic->notify();
+        }
+
+        // PV Current
+        result = node.readHoldingRegisters(0x108, 2);
+        if (result == node.ku8MBSuccess)
+        {
+            value = node.getResponseBuffer(0);
+            float current = static_cast<float>(value) * 0.01;
+            this->pPVCurrentCharacteristic->setValue(current);
+            this->pPVCurrentCharacteristic->notify();
+        }
     }
 };
 
-SolarBLECallbacks bleCallbacks;
-
-void setupBluetooth()
-{
-    BLEDevice::init(PROJECT_NAME);
-    // Create the BLE Server
-    pServer = BLEDevice::createServer();
-    // Create the BLE Service
-    pService = pServer->createService(BATTERY_SERVICE_UUID);
-
-    pBatterySOC = pService->createCharacteristic(BATTERY_CHARACTERISTIC_UUID,
-                                                 BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
-
-    batteryLevelDescriptor.setValue("Percentage 0 - 100");
-    pBatterySOC->addDescriptor(&batteryLevelDescriptor);
-    // Let client decides when to get notified to save power on the server side
-    pBatterySOC->addDescriptor(new BLE2902());
-
-    pService->addCharacteristic(pBatterySOC);
-    pServer->setCallbacks((BLEServerCallbacks *)&bleCallbacks);
-    pService->start();
-
-    BLEAdvertising *pAdvertising = pServer->getAdvertising();
-    pAdvertising->addServiceUUID(BATTERY_SERVICE_UUID);
-    pAdvertising->setScanResponse(true);
-    pAdvertising->setMinPreferred(0x06);
-    pAdvertising->start();
-}
-
 void setupRS232()
 {
-    Serial2.begin(9600, SERIAL_8N1, RS232_RX_PIN, RS232_TX_PIN);
-    node.begin(1, Serial2);
 }
 
 void setup()
 {
     Serial.begin(9600);
     setupRS232();
-    setupBluetooth();
     Serial.println("Starting solar charge monitor");
 }
 
@@ -111,8 +189,9 @@ void loop()
 {
     uint8_t result;
     uint16_t soc;
+    SolarBox &solarBox = SolarBox::getInstance();
 
-    if (clientConnected)
+    if (solarBox.connected())
     {
         result = node.readHoldingRegisters(0x101, 2);
         if (result == node.ku8MBSuccess)
