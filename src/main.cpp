@@ -11,6 +11,33 @@
 #define RS232_RX_PIN 3
 #define RELAY_PIN 16
 
+uint16_t voltageToSOC(uint16_t voltage)
+{
+    static uint16_t socTable[][2] = {
+        {136, 100},
+        {134, 99},
+        {133, 90},
+        {132, 70},
+        {131, 40},
+        {130, 30},
+        {129, 20},
+        {128, 17},
+        {125, 14},
+        {120, 9},
+        {100, 0},
+    };
+    static size_t socTableLength = sizeof(socTable) / sizeof(socTable[0]);
+    for (size_t i = 0; i < socTableLength; i++)
+    {
+        if (voltage >= socTable[i][0])
+        {
+            return socTable[i][1];
+        }
+    }
+
+    return 0;
+}
+
 class TriggerCallback : public BLECharacteristicCallbacks
 {
     virtual void onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_param_t *param)
@@ -106,6 +133,8 @@ public:
         pAdvertising->setScanResponse(true);
         pAdvertising->setMinPreferred(0x06);
         pAdvertising->start();
+
+        return instance;
     }
 
     virtual void onConnect(BLEServer *pServer)
@@ -175,33 +204,6 @@ void setup()
 {
     Serial.begin(9600);
     Serial.println("Starting solar charge monitor");
-}
-
-uint16_t voltageToSOC(uint16_t voltage)
-{
-    static uint16_t socTable[][2] = {
-        {136, 100},
-        {134, 99},
-        {133, 90},
-        {132, 70},
-        {131, 40},
-        {130, 30},
-        {129, 20},
-        {128, 17},
-        {125, 14},
-        {120, 9},
-        {100, 0},
-    };
-    static size_t socTableLength = sizeof(socTable) / sizeof(socTable[0]);
-    for (size_t i = 0; i < socTableLength; i++)
-    {
-        if (voltage >= socTable[i][0])
-        {
-            return socTable[i][1];
-        }
-    }
-
-    return 0;
 }
 
 void loop()
