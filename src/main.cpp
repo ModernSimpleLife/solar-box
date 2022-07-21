@@ -159,6 +159,15 @@ public:
             this->pPVCurrentCharacteristic->setValue(current);
             this->pPVCurrentCharacteristic->notify();
         }
+
+        // PV Power
+        result = node.readHoldingRegisters(0x108, 2);
+        if (result == node.ku8MBSuccess)
+        {
+            value = node.getResponseBuffer(0);
+            this->pPVPowerCharacteristic->setValue(value);
+            this->pPVPowerCharacteristic->notify();
+        }
     }
 };
 
