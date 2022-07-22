@@ -152,13 +152,13 @@ public:
     {
         this->clientConnectedCount++;
         pServer->startAdvertising();
-        Serial.println("Client got connected");
+        Serial.printf("Client got connected. %u clients are connected", this->clientConnectedCount);
     }
 
     virtual void onDisconnect(BLEServer *pServer)
     {
         this->clientConnectedCount--;
-        Serial.println("Client got disconnected");
+        Serial.printf("Client got disconnected. %u clients are connected\n", this->clientConnectedCount);
     }
 
     void update()
@@ -166,7 +166,7 @@ public:
         uint8_t result;
         static uint16_t value = 0;
 
-        if (this->clientConnectedCount > 0)
+        if (this->clientConnectedCount == 0)
         {
             return;
         }
