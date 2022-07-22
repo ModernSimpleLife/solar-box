@@ -107,7 +107,7 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
         const loadActive = data[4].getUint8(0) !== 0 ? true : false;
         console.log("Confirm load active:", loadActive);
         setLoadActive(loadActive);
-      }, 500);
+      }, 1000);
 
       return () => {
         clearInterval(interval);
