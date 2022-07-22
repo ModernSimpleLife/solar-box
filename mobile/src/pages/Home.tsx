@@ -21,6 +21,7 @@ import {
   RequestBleDeviceOptions,
 } from "@capacitor-community/bluetooth-le";
 import { useCallback, useEffect, useState } from "react";
+import { useHistory } from "react-router";
 
 const SERVICES = {
   BATTERY: numberToUUID(0x180f), // battery service
@@ -89,9 +90,13 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
     [props.device.deviceId]
   );
 
+  const history = useHistory();
+
   useEffect(() => {
     (async () => {
-      await BleClient.connect(props.device.deviceId);
+      await BleClient.connect(props.device.deviceId, () => {
+        history.go(0);
+      });
 
       const interval = setInterval(async () => {
         const data = await readData();
@@ -108,7 +113,7 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
         clearInterval(interval);
       };
     })();
-  }, [props.device.deviceId, readData]);
+  }, [props.device.deviceId, readData, history]);
 
   return (
     <IonPage>
