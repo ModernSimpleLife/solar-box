@@ -53,7 +53,7 @@ class SolarBox : public BLEServerCallbacks
 {
 private:
     BLEServer *pServer;
-    bool clientConnected = false;
+    uint8_t clientConnectedCount = 0;
     ModbusMaster node;
 
     BLEService *pBatteryService;
@@ -150,14 +150,14 @@ public:
 
     virtual void onConnect(BLEServer *pServer)
     {
-        this->clientConnected = true;
+        this->clientConnectedCount++;
         pServer->startAdvertising();
         Serial.println("Client got connected");
     }
 
     virtual void onDisconnect(BLEServer *pServer)
     {
-        this->clientConnected = false;
+        this->clientConnectedCount--;
         Serial.println("Client got disconnected");
     }
 
@@ -166,7 +166,7 @@ public:
         uint8_t result;
         static uint16_t value = 0;
 
-        if (!this->clientConnected)
+        if (this->clientConnectedCount > 0)
         {
             return;
         }
