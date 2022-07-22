@@ -113,14 +113,16 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>{props.device.name || props.device.deviceId}</IonTitle>
+          <IonTitle>
+            {props.device.name || ""} ({props.device.deviceId})
+          </IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen>
         <IonHeader collapse="condense">
           <IonToolbar>
             <IonTitle size="large">
-              {props.device.name || props.device.deviceId}
+              {props.device.name || ""} ({props.device.deviceId})
             </IonTitle>
           </IonToolbar>
         </IonHeader>
