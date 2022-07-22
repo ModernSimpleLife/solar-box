@@ -9,6 +9,7 @@ import {
   IonToolbar,
   IonLabel,
   IonIcon,
+  IonText,
 } from "@ionic/react";
 import { power } from "ionicons/icons";
 import "./Home.css";
@@ -164,6 +165,7 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
 };
 
 const Home: React.FC = () => {
+  const [bleAvailable, setBleAvailable] = useState(false);
   const [device, setDevice] = useState<BleDevice | null>(null);
   const [error, setError] = useState("");
 
@@ -182,6 +184,18 @@ const Home: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    (async () => {
+      try {
+        await BleClient.initialize({ androidNeverForLocation: true });
+        setBleAvailable(true);
+      } catch (error) {
+        setBleAvailable(false);
+        setError((error as Error).toString());
+      }
+    })();
+  }, []);
+
   const Discovery = () => (
     <IonPage>
       <IonHeader>
@@ -196,10 +210,16 @@ const Home: React.FC = () => {
           </IonToolbar>
         </IonHeader>
         <IonItem>
-          <IonButton size="default" onClick={() => onDiscover()}>
+          <IonButton
+            size="default"
+            onClick={() => onDiscover()}
+            disabled={!bleAvailable}
+          >
             Discover
           </IonButton>
-          <IonLabel slot="error">{error}</IonLabel>
+          <IonLabel slot="error">
+            <IonText>{error}</IonText>
+          </IonLabel>
         </IonItem>
       </IonContent>
     </IonPage>

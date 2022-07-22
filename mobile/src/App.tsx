@@ -1,6 +1,6 @@
 import { Redirect, Route } from "react-router-dom";
 import { IonApp, IonRouterOutlet, setupIonicReact } from "@ionic/react";
-import { IonReactHashRouter, IonReactRouter } from "@ionic/react-router";
+import { IonReactHashRouter } from "@ionic/react-router";
 import Home from "./pages/Home";
 
 /* Core CSS required for Ionic components to work properly */
@@ -21,22 +21,10 @@ import "@ionic/react/css/display.css";
 
 /* Theme variables */
 import "./theme/variables.css";
-import { BleClient } from "@capacitor-community/bluetooth-le";
-import { useEffect } from "react";
 
 setupIonicReact();
 
 const App: React.FC = () => {
-  useEffect(() => {
-    (async () => {
-      try {
-        await BleClient.initialize({ androidNeverForLocation: true });
-      } catch (error) {
-        console.error(error);
-      }
-    })();
-  }, []);
-
   return (
     <IonApp>
       <IonReactHashRouter>
