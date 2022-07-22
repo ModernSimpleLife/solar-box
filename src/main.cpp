@@ -89,6 +89,9 @@ public:
 
         // Init rs232 and modbus
         Serial2.begin(9600, SERIAL_8N1, RS232_RX_PIN, RS232_TX_PIN);
+        while (!Serial2)
+        {
+        }
         instance.node.begin(1, Serial2);
 #endif
 
@@ -217,6 +220,9 @@ public:
 void setup()
 {
     Serial.begin(9600);
+    while (!Serial)
+    {
+    }
     Serial.println("Starting solar charge monitor");
 }
 
