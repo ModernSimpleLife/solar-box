@@ -1,15 +1,14 @@
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
-#include <BLEBeacon.h>
 #include <Arduino.h>
-#include <BLE2902.h>
 #include <ModbusMaster.h>
 
+#define CAMERA_MODEL_AI_THINKER
 #define PROJECT_NAME "Solar Box"
 #define RS232_TX_PIN 1
 #define RS232_RX_PIN 3
-#define RELAY_PIN 16
+#define RELAY_PIN 0
 // #define MOCK
 
 uint16_t voltageToSOC(uint16_t voltage)
