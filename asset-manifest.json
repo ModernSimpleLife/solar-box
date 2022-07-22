@@ -1,0 +1,36 @@
+{
+  "files": {
+    "main.css": "/solar-charge-controller/static/css/main.8338a2d4.css",
+    "main.js": "/solar-charge-controller/static/js/main.dc8e2978.js",
+    "static/js/630.fee76cf4.chunk.js": "/solar-charge-controller/static/js/630.fee76cf4.chunk.js",
+    "static/js/858.ab105bc8.chunk.js": "/solar-charge-controller/static/js/858.ab105bc8.chunk.js",
+    "static/js/372.3d2a7203.chunk.js": "/solar-charge-controller/static/js/372.3d2a7203.chunk.js",
+    "static/js/856.6b5875f8.chunk.js": "/solar-charge-controller/static/js/856.6b5875f8.chunk.js",
+    "static/js/851.84a4619d.chunk.js": "/solar-charge-controller/static/js/851.84a4619d.chunk.js",
+    "static/js/22.257b4ca6.chunk.js": "/solar-charge-controller/static/js/22.257b4ca6.chunk.js",
+    "static/js/344.fbf53b99.chunk.js": "/solar-charge-controller/static/js/344.fbf53b99.chunk.js",
+    "static/js/841.fccb5252.chunk.js": "/solar-charge-controller/static/js/841.fccb5252.chunk.js",
+    "static/js/186.527fae2d.chunk.js": "/solar-charge-controller/static/js/186.527fae2d.chunk.js",
+    "static/js/665.98d4bdd6.chunk.js": "/solar-charge-controller/static/js/665.98d4bdd6.chunk.js",
+    "static/js/377.5d739f17.chunk.js": "/solar-charge-controller/static/js/377.5d739f17.chunk.js",
+    "service-worker.js": "/solar-charge-controller/service-worker.js",
+    "index.html": "/solar-charge-controller/index.html",
+    "main.8338a2d4.css.map": "/solar-charge-controller/static/css/main.8338a2d4.css.map",
+    "main.dc8e2978.js.map": "/solar-charge-controller/static/js/main.dc8e2978.js.map",
+    "630.fee76cf4.chunk.js.map": "/solar-charge-controller/static/js/630.fee76cf4.chunk.js.map",
+    "858.ab105bc8.chunk.js.map": "/solar-charge-controller/static/js/858.ab105bc8.chunk.js.map",
+    "372.3d2a7203.chunk.js.map": "/solar-charge-controller/static/js/372.3d2a7203.chunk.js.map",
+    "856.6b5875f8.chunk.js.map": "/solar-charge-controller/static/js/856.6b5875f8.chunk.js.map",
+    "851.84a4619d.chunk.js.map": "/solar-charge-controller/static/js/851.84a4619d.chunk.js.map",
+    "22.257b4ca6.chunk.js.map": "/solar-charge-controller/static/js/22.257b4ca6.chunk.js.map",
+    "344.fbf53b99.chunk.js.map": "/solar-charge-controller/static/js/344.fbf53b99.chunk.js.map",
+    "841.fccb5252.chunk.js.map": "/solar-charge-controller/static/js/841.fccb5252.chunk.js.map",
+    "186.527fae2d.chunk.js.map": "/solar-charge-controller/static/js/186.527fae2d.chunk.js.map",
+    "665.98d4bdd6.chunk.js.map": "/solar-charge-controller/static/js/665.98d4bdd6.chunk.js.map",
+    "377.5d739f17.chunk.js.map": "/solar-charge-controller/static/js/377.5d739f17.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.8338a2d4.css",
+    "static/js/main.dc8e2978.js"
+  ]
+}
