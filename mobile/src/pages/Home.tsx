@@ -8,9 +8,9 @@ import {
   IonTitle,
   IonToolbar,
   IonLabel,
-  IonToggle,
+  IonIcon,
 } from "@ionic/react";
-import ExploreContainer from "../components/ExploreContainer";
+import { power } from "ionicons/icons";
 import "./Home.css";
 import {
   BleClient,
@@ -19,7 +19,7 @@ import {
   numberToUUID,
   RequestBleDeviceOptions,
 } from "@capacitor-community/bluetooth-le";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const SERVICES = {
   BATTERY: numberToUUID(0x180f), // battery service
@@ -47,6 +47,7 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
   const [pvPower, setPVPower] = useState(0);
 
   const onTriggerLoad = async (checked: boolean) => {
+    console.log(`Trigger ${checked}`);
     await BleClient.writeWithoutResponse(
       props.device.deviceId,
       SERVICES.TRIGGER,
@@ -55,89 +56,108 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
     );
   };
 
+  const readData = useCallback(
+    () =>
+      Promise.all([
+        BleClient.read(
+          props.device.deviceId,
+          SERVICES.BATTERY,
+          CHARACTERISTICS.BATTERY_LEVEL
+        ),
+        BleClient.read(
+          props.device.deviceId,
+          SERVICES.PV,
+          CHARACTERISTICS.PV_VOLTAGE
+        ),
+        BleClient.read(
+          props.device.deviceId,
+          SERVICES.PV,
+          CHARACTERISTICS.PV_CURRENT
+        ),
+        BleClient.read(
+          props.device.deviceId,
+          SERVICES.PV,
+          CHARACTERISTICS.PV_POWER
+        ),
+        BleClient.read(
+          props.device.deviceId,
+          SERVICES.TRIGGER,
+          CHARACTERISTICS.TRIGGER_LOAD
+        ),
+      ]),
+    [props.device.deviceId]
+  );
+
   useEffect(() => {
     (async () => {
       await BleClient.connect(props.device.deviceId);
 
-      await BleClient.startNotifications(
-        props.device.deviceId,
-        SERVICES.BATTERY,
-        CHARACTERISTICS.BATTERY_LEVEL,
-        (value) => {
-          setBatteryLevel(value.getUint16(0));
-        }
-      );
+      const interval = setInterval(async () => {
+        const data = await readData();
+        setBatteryLevel(data[0].getUint16(0, true));
+        setPVVoltage(data[1].getFloat32(0, true));
+        setPVCurrent(data[2].getFloat32(0, true));
+        setPVPower(data[3].getUint16(0, true));
+        const loadActive = data[4].getUint8(0) !== 0 ? true : false;
+        console.log("Confirm load active:", loadActive);
+        setLoadActive(loadActive);
+      }, 500);
 
-      await BleClient.startNotifications(
-        props.device.deviceId,
-        SERVICES.PV,
-        CHARACTERISTICS.PV_VOLTAGE,
-        (value) => {
-          setPVVoltage(value.getFloat32(0));
-        }
-      );
-
-      await BleClient.startNotifications(
-        props.device.deviceId,
-        SERVICES.PV,
-        CHARACTERISTICS.PV_CURRENT,
-        (value) => {
-          setPVCurrent(value.getFloat32(0));
-        }
-      );
-
-      await BleClient.startNotifications(
-        props.device.deviceId,
-        SERVICES.PV,
-        CHARACTERISTICS.PV_POWER,
-        (value) => {
-          setPVPower(value.getUint16(0));
-        }
-      );
-
-      await BleClient.startNotifications(
-        props.device.deviceId,
-        SERVICES.TRIGGER,
-        CHARACTERISTICS.TRIGGER_LOAD,
-        (value) => {
-          setLoadActive(value.getUint8(0) !== 0 ? true : false);
-        }
-      );
+      return () => {
+        clearInterval(interval);
+      };
     })();
-  }, [props.device.deviceId]);
+  }, [props.device.deviceId, readData]);
 
   return (
-    <IonContent>
-      <IonList>
-        <IonItem>
-          <IonLabel>{props.device.name}</IonLabel>
-        </IonItem>
-        <IonItem>
-          <IonLabel>PV Voltage</IonLabel>
-          <IonLabel>{pvVoltage}</IonLabel>
-        </IonItem>
-        <IonItem>
-          <IonLabel>PV Current</IonLabel>
-          <IonLabel>{pvCurrent}</IonLabel>
-        </IonItem>
-        <IonItem>
-          <IonLabel>PV Power</IonLabel>
-          <IonLabel>{pvPower}</IonLabel>
-        </IonItem>
-        <IonItem>
-          <IonLabel>Battery Level</IonLabel>
-          <IonLabel>{batteryLevel}</IonLabel>
-        </IonItem>
-      </IonList>
+    <IonPage>
+      <IonHeader>
+        <IonToolbar>
+          <IonTitle>{props.device.name || props.device.deviceId}</IonTitle>
+        </IonToolbar>
+      </IonHeader>
+      <IonContent fullscreen>
+        <IonHeader collapse="condense">
+          <IonToolbar>
+            <IonTitle size="large">
+              {props.device.name || props.device.deviceId}
+            </IonTitle>
+          </IonToolbar>
+        </IonHeader>
 
-      <IonItem>
-        <IonLabel>Load</IonLabel>
-        <IonToggle
-          checked={loadActive}
-          onIonChange={(e) => onTriggerLoad(e.detail.checked)}
-        ></IonToggle>
-      </IonItem>
-    </IonContent>
+        <IonContent>
+          <IonList>
+            <IonItem>
+              <IonLabel>PV Voltage</IonLabel>
+              <IonLabel>{pvVoltage.toFixed(2)} V</IonLabel>
+            </IonItem>
+            <IonItem>
+              <IonLabel>PV Current</IonLabel>
+              <IonLabel>{pvCurrent.toFixed(2)} A</IonLabel>
+            </IonItem>
+            <IonItem>
+              <IonLabel>PV Power</IonLabel>
+              <IonLabel>{pvPower} Watts</IonLabel>
+            </IonItem>
+            <IonItem>
+              <IonLabel>Battery Level</IonLabel>
+              <IonLabel>{batteryLevel}%</IonLabel>
+            </IonItem>
+          </IonList>
+
+          <IonItem>
+            <IonLabel>Load</IonLabel>
+            <IonButton
+              size="large"
+              color={loadActive ? "danger" : "primary"}
+              onClick={() => onTriggerLoad(!loadActive)}
+            >
+              <IonIcon icon={power}></IonIcon>
+            </IonButton>
+          </IonItem>
+        </IonContent>
+      </IonContent>
+    </IonPage>
   );
 };
 
@@ -156,34 +176,34 @@ const Home: React.FC = () => {
       setDevice(device);
     } catch (error) {
       console.error(error);
-      setError(error as string);
+      setError((error as Error).toString());
     }
   };
 
-  return (
+  const Discovery = () => (
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Blank</IonTitle>
+          <IonTitle>Device Discovery</IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen>
         <IonHeader collapse="condense">
           <IonToolbar>
-            <IonTitle size="large">Blank</IonTitle>
+            <IonTitle size="large">Device Discovery</IonTitle>
           </IonToolbar>
         </IonHeader>
-        <ExploreContainer />
-
-        <p>{error}</p>
-        {device ? (
-          <SolarBox device={device}></SolarBox>
-        ) : (
-          <IonButton onClick={() => onDiscover()}>Discover</IonButton>
-        )}
+        <IonItem>
+          <IonButton size="default" onClick={() => onDiscover()}>
+            Discover
+          </IonButton>
+          <IonLabel slot="error">{error}</IonLabel>
+        </IonItem>
       </IonContent>
     </IonPage>
   );
+
+  return device ? <SolarBox device={device}></SolarBox> : <Discovery />;
 };
 
 export default Home;

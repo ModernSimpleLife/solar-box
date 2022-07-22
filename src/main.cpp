@@ -10,6 +10,7 @@
 #define RS232_TX_PIN 1
 #define RS232_RX_PIN 3
 #define RELAY_PIN 16
+#define MOCK
 
 uint16_t voltageToSOC(uint16_t voltage)
 {
@@ -43,6 +44,7 @@ class TriggerCallback : public BLECharacteristicCallbacks
     virtual void onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_param_t *param)
     {
         bool triggerOn = *(bool *)pCharacteristic->getData();
+        Serial.printf("Load is %s\n", triggerOn ? "ACTIVE" : "INACTIVE");
         digitalWrite(RELAY_PIN, triggerOn ? HIGH : LOW);
     }
 };
@@ -68,13 +70,6 @@ private:
 
     SolarBox()
     {
-        pinMode(RELAY_PIN, OUTPUT);
-
-        // Init rs232 and modbus
-        Serial2.begin(9600, SERIAL_8N1, RS232_RX_PIN, RS232_TX_PIN);
-        node.begin(1, Serial2);
-
-        BLEDevice::init(PROJECT_NAME);
     }
 
 public:
@@ -89,6 +84,17 @@ public:
         {
             return instance;
         }
+
+#ifndef MOCK
+        pinMode(RELAY_PIN, OUTPUT);
+        digitalWrite(RELAY_PIN, LOW);
+
+        // Init rs232 and modbus
+        Serial2.begin(9600, SERIAL_8N1, RS232_RX_PIN, RS232_TX_PIN);
+        instance.node.begin(1, Serial2);
+#endif
+
+        BLEDevice::init(PROJECT_NAME);
 
         instance.pServer = BLEDevice::createServer();
         instance.pServer->setCallbacks(&instance);
@@ -126,14 +132,19 @@ public:
         instance.pTriggerLoadCharacteristic->setCallbacks(&instance.triggerCallback);
         instance.pTriggerService->addCharacteristic(instance.pTriggerLoadCharacteristic);
         instance.pTriggerService->start();
+        uint16_t value = 0;
+        instance.pTriggerLoadCharacteristic->setValue(value);
 
         BLEAdvertising *pAdvertising = instance.pServer->getAdvertising();
         pAdvertising->addServiceUUID(instance.pBatteryService->getUUID());
         pAdvertising->addServiceUUID(instance.pPVService->getUUID());
+        pAdvertising->addServiceUUID(instance.pTriggerService->getUUID());
         pAdvertising->setScanResponse(true);
         pAdvertising->setMinPreferred(0x06);
         pAdvertising->start();
 
+        initialized = true;
+        Serial.println("Initialized Solar Box successfully");
         return instance;
     }
 
@@ -153,7 +164,7 @@ public:
     void update()
     {
         uint8_t result;
-        uint16_t value;
+        static uint16_t value = 0;
 
         if (!this->clientConnected)
         {
@@ -161,42 +172,47 @@ public:
         }
 
         // Battery Voltage
+#ifdef MOCK
+        value++;
+        if (value > 10)
+        {
+            value = 0;
+        }
+        Serial.printf("Sending: %u\n", value);
+#endif
+
+#ifndef MOCK
         result = node.readHoldingRegisters(0x101, 2);
-        if (result == node.ku8MBSuccess)
-        {
-            value = voltageToSOC(node.getResponseBuffer(0));
-            this->pBatteryLevelCharacteristic->setValue(value);
-            this->pBatteryLevelCharacteristic->notify();
-        }
+        value = result == node.ku8MBSuccess ? voltageToSOC(node.getResponseBuffer(0)) : 0;
+#endif
+        this->pBatteryLevelCharacteristic->setValue(value);
+        this->pBatteryLevelCharacteristic->notify();
 
-        // PV Voltage
+// PV Voltage
+#ifndef MOCK
         result = node.readHoldingRegisters(0x107, 2);
-        if (result == node.ku8MBSuccess)
-        {
-            value = node.getResponseBuffer(0);
-            float voltage = static_cast<float>(value) * 0.1;
-            this->pPVVoltageCharacteristic->setValue(voltage);
-            this->pPVVoltageCharacteristic->notify();
-        }
+        value = result == node.ku8MBSuccess ? node.getResponseBuffer(0) : 0;
+#endif
+        float voltage = static_cast<float>(value) * 0.1;
+        this->pPVVoltageCharacteristic->setValue(voltage);
+        this->pPVVoltageCharacteristic->notify();
 
-        // PV Current
+// PV Current
+#ifndef MOCK
         result = node.readHoldingRegisters(0x108, 2);
-        if (result == node.ku8MBSuccess)
-        {
-            value = node.getResponseBuffer(0);
-            float current = static_cast<float>(value) * 0.01;
-            this->pPVCurrentCharacteristic->setValue(current);
-            this->pPVCurrentCharacteristic->notify();
-        }
+        value = result == node.ku8MBSuccess ? node.getResponseBuffer(0) : 0;
+#endif
+        float current = static_cast<float>(value) * 0.01;
+        this->pPVCurrentCharacteristic->setValue(current);
+        this->pPVCurrentCharacteristic->notify();
 
-        // PV Power
-        result = node.readHoldingRegisters(0x108, 2);
-        if (result == node.ku8MBSuccess)
-        {
-            value = node.getResponseBuffer(0);
-            this->pPVPowerCharacteristic->setValue(value);
-            this->pPVPowerCharacteristic->notify();
-        }
+// PV Power
+#ifndef MOCK
+        result = node.readHoldingRegisters(0x109, 2);
+        value = result == node.ku8MBSuccess ? node.getResponseBuffer(0) : 0;
+#endif
+        this->pPVPowerCharacteristic->setValue(value);
+        this->pPVPowerCharacteristic->notify();
     }
 };
 
