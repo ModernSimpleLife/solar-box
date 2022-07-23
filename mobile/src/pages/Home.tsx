@@ -98,7 +98,7 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
         history.go(0);
       });
 
-      const interval = setInterval(async () => {
+      const sync = async () => {
         const data = await readData();
         setBatteryLevel(data[0].getUint16(0, true));
         setPVVoltage(data[1].getFloat32(0, true));
@@ -107,8 +107,10 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
         const loadActive = data[4].getUint8(0) !== 0 ? true : false;
         console.log("Confirm load active:", loadActive);
         setLoadActive(loadActive);
-      }, 1000);
+      };
 
+      const interval = setInterval(sync, 500);
+      await sync();
       return () => {
         clearInterval(interval);
       };
