@@ -10,6 +10,9 @@
 #define RELAY_PIN 0
 // #define MOCK
 
+#define LOAD_PV_WATT_CUTOFF 10
+#define LOAD_TIMEOUT_IN_MILLIS ((uint64_t)1 * 60 * 60 * 1000)
+
 uint16_t voltageToSOC(uint16_t voltage)
 {
     static uint16_t socTable[][2] = {
@@ -37,15 +40,43 @@ uint16_t voltageToSOC(uint16_t voltage)
     return 0;
 }
 
-class TriggerCallback : public BLECharacteristicCallbacks
+class LoadController : public BLECharacteristicCallbacks
 {
+public:
+    uint64_t lastActivatedAt = 0;
+
+    void trigger(bool activate)
+    {
+        digitalWrite(RELAY_PIN, activate ? HIGH : LOW);
+
+        if (activate)
+        {
+            this->lastActivatedAt = millis();
+        }
+    }
+
     virtual void onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_param_t *param)
     {
-        bool triggerOn = *(bool *)pCharacteristic->getData();
-        Serial.printf("Load is %s\n", triggerOn ? "ACTIVE" : "INACTIVE");
-        digitalWrite(RELAY_PIN, triggerOn ? HIGH : LOW);
+        this->trigger(*(bool *)pCharacteristic->getData());
     }
-};
+
+    void setCurrentPVPower(uint16_t watts)
+    {
+        if (watts > LOAD_PV_WATT_CUTOFF)
+        {
+            this->trigger(true);
+        }
+    }
+
+    void update()
+    {
+        uint64_t elapsed = millis() - this->lastActivatedAt;
+        if (elapsed > LOAD_TIMEOUT_IN_MILLIS)
+        {
+            this->trigger(false);
+        }
+    }
+} loadController;
 
 class SolarBox : public BLEServerCallbacks
 {
@@ -64,7 +95,6 @@ private:
 
     BLEService *pTriggerService;
     BLECharacteristic *pTriggerLoadCharacteristic;
-    TriggerCallback triggerCallback;
 
     SolarBox()
     {
@@ -88,6 +118,7 @@ public:
 
 #ifndef MOCK
         // Init rs232 and modbus
+        // FIXME: This line will get stuck when there's data in the RX pin, pressing the reset button fixes it.
         Serial2.begin(9600, SERIAL_8N1, RS232_RX_PIN, RS232_TX_PIN);
         instance.node.begin(1, Serial2);
 #endif
@@ -127,7 +158,7 @@ public:
                                                                                              BLECharacteristic::PROPERTY_WRITE |
                                                                                                  BLECharacteristic::PROPERTY_READ |
                                                                                                  BLECharacteristic::PROPERTY_NOTIFY);
-        instance.pTriggerLoadCharacteristic->setCallbacks(&instance.triggerCallback);
+        instance.pTriggerLoadCharacteristic->setCallbacks(&loadController);
         instance.pTriggerService->addCharacteristic(instance.pTriggerLoadCharacteristic);
         instance.pTriggerService->start();
         uint16_t value = 0;
@@ -211,6 +242,7 @@ public:
 #endif
         this->pPVPowerCharacteristic->setValue(value);
         this->pPVPowerCharacteristic->notify();
+        loadController.setCurrentPVPower(value);
     }
 };
 
@@ -227,6 +259,7 @@ void loop()
 {
     SolarBox &solarBox = SolarBox::getInstance();
 
-    // solarBox.update();
+    solarBox.update();
+    loadController.update();
     delay(1000);
 }
