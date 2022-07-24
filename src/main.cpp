@@ -5,10 +5,10 @@
 #include <ModbusMaster.h>
 
 #define PROJECT_NAME "Solar Box"
-#define RS232_TX_PIN 1
-#define RS232_RX_PIN 3
-#define RELAY_PIN 0
-// #define MOCK
+#define RS232_TX_PIN 17
+#define RS232_RX_PIN 16
+#define RELAY_PIN 15
+#define MOCK
 
 #define LOAD_PV_WATT_CUTOFF 10
 #define LOAD_TIMEOUT_IN_MILLIS ((uint64_t)1 * 60 * 60 * 1000)
@@ -96,23 +96,12 @@ private:
     BLEService *pTriggerService;
     BLECharacteristic *pTriggerLoadCharacteristic;
 
-    SolarBox()
-    {
-    }
-
 public:
-    static SolarBox &
-    getInstance()
+    void begin()
     {
-        static bool initialized = false;
-        static SolarBox instance;
         BLECharacteristic *pCharacteristic;
 
-        if (initialized)
-        {
-            return instance;
-        }
-
+        Serial.println("Initializing relay");
         pinMode(RELAY_PIN, OUTPUT);
         digitalWrite(RELAY_PIN, LOW);
 
@@ -120,61 +109,60 @@ public:
         // Init rs232 and modbus
         // FIXME: This line will get stuck when there's data in the RX pin, pressing the reset button fixes it.
         Serial2.begin(9600, SERIAL_8N1, RS232_RX_PIN, RS232_TX_PIN);
-        instance.node.begin(1, Serial2);
+        this->node.begin(1, Serial2);
 #endif
 
+        Serial.println("Initializing ble");
         BLEDevice::init(PROJECT_NAME);
 
-        instance.pServer = BLEDevice::createServer();
-        instance.pServer->setCallbacks(&instance);
+        this->pServer = BLEDevice::createServer();
+        this->pServer->setCallbacks(this);
 
         // Init battery service
-        instance.pBatteryService = instance.pServer->createService(BLEUUID((uint16_t)0x180F));
-        instance.pBatteryLevelCharacteristic = instance.pBatteryService->createCharacteristic(BLEUUID((uint16_t)0x2A19),
-                                                                                              BLECharacteristic::PROPERTY_READ |
-                                                                                                  BLECharacteristic::PROPERTY_NOTIFY);
-        instance.pBatteryService->addCharacteristic(instance.pBatteryLevelCharacteristic);
-        instance.pBatteryService->start();
+        this->pBatteryService = this->pServer->createService(BLEUUID((uint16_t)0x180F));
+        this->pBatteryLevelCharacteristic = this->pBatteryService->createCharacteristic(BLEUUID((uint16_t)0x2A19),
+                                                                                        BLECharacteristic::PROPERTY_READ |
+                                                                                            BLECharacteristic::PROPERTY_NOTIFY);
+        this->pBatteryService->addCharacteristic(this->pBatteryLevelCharacteristic);
+        this->pBatteryService->start();
 
         // Init PV service
-        instance.pPVService = instance.pServer->createService(BLEUUID("b871a2ee-1651-47ac-a22c-e340d834c1ef"));
-        instance.pPVVoltageCharacteristic = instance.pPVService->createCharacteristic(BLEUUID("46e98325-92b7-4e5f-84c9-8edcbd9338db"),
-                                                                                      BLECharacteristic::PROPERTY_READ |
-                                                                                          BLECharacteristic::PROPERTY_NOTIFY);
-        instance.pPVCurrentCharacteristic = instance.pPVService->createCharacteristic(BLEUUID("91b3d4db-550b-464f-8127-16eeb209dd1d"),
-                                                                                      BLECharacteristic::PROPERTY_READ |
-                                                                                          BLECharacteristic::PROPERTY_NOTIFY);
-        instance.pPVPowerCharacteristic = instance.pPVService->createCharacteristic(BLEUUID("2c85bbb9-0e1a-4bbb-8315-f7cc29831515"),
-                                                                                    BLECharacteristic::PROPERTY_READ |
-                                                                                        BLECharacteristic::PROPERTY_NOTIFY);
-        instance.pPVService->addCharacteristic(instance.pPVVoltageCharacteristic);
-        instance.pPVService->addCharacteristic(instance.pPVCurrentCharacteristic);
-        instance.pPVService->addCharacteristic(instance.pPVPowerCharacteristic);
-        instance.pPVService->start();
+        this->pPVService = this->pServer->createService(BLEUUID("b871a2ee-1651-47ac-a22c-e340d834c1ef"));
+        this->pPVVoltageCharacteristic = this->pPVService->createCharacteristic(BLEUUID("46e98325-92b7-4e5f-84c9-8edcbd9338db"),
+                                                                                BLECharacteristic::PROPERTY_READ |
+                                                                                    BLECharacteristic::PROPERTY_NOTIFY);
+        this->pPVCurrentCharacteristic = this->pPVService->createCharacteristic(BLEUUID("91b3d4db-550b-464f-8127-16eeb209dd1d"),
+                                                                                BLECharacteristic::PROPERTY_READ |
+                                                                                    BLECharacteristic::PROPERTY_NOTIFY);
+        this->pPVPowerCharacteristic = this->pPVService->createCharacteristic(BLEUUID("2c85bbb9-0e1a-4bbb-8315-f7cc29831515"),
+                                                                              BLECharacteristic::PROPERTY_READ |
+                                                                                  BLECharacteristic::PROPERTY_NOTIFY);
+        this->pPVService->addCharacteristic(this->pPVVoltageCharacteristic);
+        this->pPVService->addCharacteristic(this->pPVCurrentCharacteristic);
+        this->pPVService->addCharacteristic(this->pPVPowerCharacteristic);
+        this->pPVService->start();
 
         // Init trigger service to take inputs from clients
-        instance.pTriggerService = instance.pServer->createService(BLEUUID("385cc70e-8a8c-4827-abc0-d01385aa0574"));
-        instance.pTriggerLoadCharacteristic = instance.pTriggerService->createCharacteristic(BLEUUID("287651ed-3fda-42f4-92c6-7aaca7da634c"),
-                                                                                             BLECharacteristic::PROPERTY_WRITE |
-                                                                                                 BLECharacteristic::PROPERTY_READ |
-                                                                                                 BLECharacteristic::PROPERTY_NOTIFY);
-        instance.pTriggerLoadCharacteristic->setCallbacks(&loadController);
-        instance.pTriggerService->addCharacteristic(instance.pTriggerLoadCharacteristic);
-        instance.pTriggerService->start();
+        this->pTriggerService = this->pServer->createService(BLEUUID("385cc70e-8a8c-4827-abc0-d01385aa0574"));
+        this->pTriggerLoadCharacteristic = this->pTriggerService->createCharacteristic(BLEUUID("287651ed-3fda-42f4-92c6-7aaca7da634c"),
+                                                                                       BLECharacteristic::PROPERTY_WRITE |
+                                                                                           BLECharacteristic::PROPERTY_READ |
+                                                                                           BLECharacteristic::PROPERTY_NOTIFY);
+        this->pTriggerLoadCharacteristic->setCallbacks(&loadController);
+        this->pTriggerService->addCharacteristic(this->pTriggerLoadCharacteristic);
+        this->pTriggerService->start();
         uint16_t value = 0;
-        instance.pTriggerLoadCharacteristic->setValue(value);
+        this->pTriggerLoadCharacteristic->setValue(value);
 
-        BLEAdvertising *pAdvertising = instance.pServer->getAdvertising();
-        pAdvertising->addServiceUUID(instance.pBatteryService->getUUID());
-        pAdvertising->addServiceUUID(instance.pPVService->getUUID());
-        pAdvertising->addServiceUUID(instance.pTriggerService->getUUID());
+        BLEAdvertising *pAdvertising = this->pServer->getAdvertising();
+        pAdvertising->addServiceUUID(this->pBatteryService->getUUID());
+        pAdvertising->addServiceUUID(this->pPVService->getUUID());
+        pAdvertising->addServiceUUID(this->pTriggerService->getUUID());
         pAdvertising->setScanResponse(false);
         pAdvertising->setMinPreferred(0x06);
         pAdvertising->start();
 
-        initialized = true;
         Serial.println("Initialized Solar Box successfully");
-        return instance;
     }
 
     virtual void onConnect(BLEServer *pServer)
@@ -244,7 +232,7 @@ public:
         this->pPVPowerCharacteristic->notify();
         loadController.setCurrentPVPower(value);
     }
-};
+} solarBox;
 
 void setup()
 {
@@ -253,12 +241,11 @@ void setup()
     {
     }
     Serial.println("Starting solar charge monitor");
+    solarBox.begin();
 }
 
 void loop()
 {
-    SolarBox &solarBox = SolarBox::getInstance();
-
     solarBox.update();
     loadController.update();
     delay(1000);
