@@ -83,15 +83,12 @@ public:
             return instance;
         }
 
-#ifndef MOCK
         pinMode(RELAY_PIN, OUTPUT);
         digitalWrite(RELAY_PIN, LOW);
 
+#ifndef MOCK
         // Init rs232 and modbus
         Serial2.begin(9600, SERIAL_8N1, RS232_RX_PIN, RS232_TX_PIN);
-        while (!Serial2)
-        {
-        }
         instance.node.begin(1, Serial2);
 #endif
 
@@ -140,7 +137,7 @@ public:
         pAdvertising->addServiceUUID(instance.pBatteryService->getUUID());
         pAdvertising->addServiceUUID(instance.pPVService->getUUID());
         pAdvertising->addServiceUUID(instance.pTriggerService->getUUID());
-        pAdvertising->setScanResponse(true);
+        pAdvertising->setScanResponse(false);
         pAdvertising->setMinPreferred(0x06);
         pAdvertising->start();
 
@@ -230,6 +227,6 @@ void loop()
 {
     SolarBox &solarBox = SolarBox::getInstance();
 
-    solarBox.update();
+    // solarBox.update();
     delay(1000);
 }
