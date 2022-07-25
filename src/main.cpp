@@ -73,7 +73,7 @@ public:
                                                                                            BLECharacteristic::PROPERTY_READ |
                                                                                            BLECharacteristic::PROPERTY_NOTIFY);
         this->pTriggerLoadCharacteristic->setCallbacks(this);
-        this->pTriggerFlashlightCharacteristic = this->pTriggerService->createCharacteristic(BLEUUID("287651ed-3fda-42f4-92c6-7aaca7da634d"),
+        this->pTriggerFlashlightCharacteristic = this->pTriggerService->createCharacteristic(BLEUUID("c660aa6e-38f4-446b-b5eb-af6140864610"),
                                                                                              BLECharacteristic::PROPERTY_WRITE |
                                                                                                  BLECharacteristic::PROPERTY_READ |
                                                                                                  BLECharacteristic::PROPERTY_NOTIFY);
