@@ -19,6 +19,8 @@
 #define RS232_TX_PIN 12
 #define RS232_RX_PIN 13
 #define RELAY_PIN 15
+#define INDICATOR_PIN 33
+#define FLASHLIGHT_PIN 4
 SoftwareSerial rs232Serial(RS232_RX_PIN, RS232_TX_PIN);
 
 #ifdef ENABLE_OTA
@@ -27,12 +29,24 @@ const char *WIFI_PASS = "pooppoop";
 AsyncWebServer otaServer(80);
 #endif
 
+class FlashlightCallback : public BLECharacteristicCallbacks
+{
+    virtual void onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_param_t *param)
+    {
+        bool activate = *(bool *)pCharacteristic->getData();
+        Serial.printf("Flashlight is %s\n", activate ? "ON" : "OFF");
+        digitalWrite(FLASHLIGHT_PIN, activate ? HIGH : LOW);
+    }
+};
+
 class SolarBox : public BLEServerCallbacks, public BLECharacteristicCallbacks
 {
 private:
     BLEServer *pServer;
     BLEService *pTriggerService;
     BLECharacteristic *pTriggerLoadCharacteristic;
+    BLECharacteristic *pTriggerFlashlightCharacteristic;
+    FlashlightCallback flashlightCb;
     uint8_t clientConnectedCount = 0;
     LoadController loadController;
     RenogyChargeController chargeController;
@@ -59,10 +73,17 @@ public:
                                                                                            BLECharacteristic::PROPERTY_READ |
                                                                                            BLECharacteristic::PROPERTY_NOTIFY);
         this->pTriggerLoadCharacteristic->setCallbacks(this);
+        this->pTriggerFlashlightCharacteristic = this->pTriggerService->createCharacteristic(BLEUUID("287651ed-3fda-42f4-92c6-7aaca7da634d"),
+                                                                                             BLECharacteristic::PROPERTY_WRITE |
+                                                                                                 BLECharacteristic::PROPERTY_READ |
+                                                                                                 BLECharacteristic::PROPERTY_NOTIFY);
+        this->pTriggerFlashlightCharacteristic->setCallbacks(&flashlightCb);
         this->pTriggerService->addCharacteristic(this->pTriggerLoadCharacteristic);
+        this->pTriggerService->addCharacteristic(this->pTriggerFlashlightCharacteristic);
         this->pTriggerService->start();
         uint16_t value = 0;
         this->pTriggerLoadCharacteristic->setValue(value);
+        this->pTriggerFlashlightCharacteristic->setValue(value);
 
         BLEAdvertising *pAdvertising = this->pServer->getAdvertising();
         pAdvertising->addServiceUUID(this->pTriggerService->getUUID());
@@ -99,10 +120,16 @@ public:
 
         if (this->clientConnectedCount > 0)
         {
+            // the built-in red led works with inverted signals
+            digitalWrite(INDICATOR_PIN, LOW);
             this->publisher.publish(state);
             uint16_t loadControllerEnabled = this->loadController.isEnabled() ? 1 : 0;
             this->pTriggerLoadCharacteristic->setValue(loadControllerEnabled);
             this->pTriggerLoadCharacteristic->notify();
+        }
+        else
+        {
+            digitalWrite(INDICATOR_PIN, HIGH);
         }
     }
 } solarBox;
@@ -111,6 +138,8 @@ void setup()
 {
     Serial.begin(9600);
     Serial.println("Starting solar charge monitor");
+    pinMode(INDICATOR_PIN, OUTPUT);
+    pinMode(FLASHLIGHT_PIN, OUTPUT);
 
 #ifdef ENABLE_OTA
     WiFi.mode(WIFI_STA);

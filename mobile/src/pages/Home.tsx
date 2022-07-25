@@ -11,7 +11,7 @@ import {
   IonIcon,
   IonText,
 } from "@ionic/react";
-import { power } from "ionicons/icons";
+import { power, flash, flashOff } from "ionicons/icons";
 import "./Home.css";
 import {
   BleClient,
@@ -35,6 +35,7 @@ const CHARACTERISTICS = {
   PV_CURRENT: "91b3d4db-550b-464f-8127-16eeb209dd1d",
   PV_POWER: "2c85bbb9-0e1a-4bbb-8315-f7cc29831515",
   TRIGGER_LOAD: "287651ed-3fda-42f4-92c6-7aaca7da634c",
+  TRIGGER_FLASHLIGHT: "287651ed-3fda-42f4-92c6-7aaca7da634d",
 };
 
 interface SolarBoxProps {
@@ -43,6 +44,7 @@ interface SolarBoxProps {
 
 const SolarBox: React.FC<SolarBoxProps> = (props) => {
   const [loadActive, setLoadActive] = useState(false);
+  const [flashlightOn, setFlashlightOn] = useState(false);
   const [batteryLevel, setBatteryLevel] = useState(0);
   const [pvVoltage, setPVVoltage] = useState(0);
   const [pvCurrent, setPVCurrent] = useState(0);
@@ -54,6 +56,15 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
       props.device.deviceId,
       SERVICES.TRIGGER,
       CHARACTERISTICS.TRIGGER_LOAD,
+      numbersToDataView([checked ? 1 : 0])
+    );
+  };
+
+  const onTriggerFlashlight = async (checked: boolean) => {
+    await BleClient.writeWithoutResponse(
+      props.device.deviceId,
+      SERVICES.TRIGGER,
+      CHARACTERISTICS.TRIGGER_FLASHLIGHT,
       numbersToDataView([checked ? 1 : 0])
     );
   };
@@ -86,6 +97,11 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
           SERVICES.TRIGGER,
           CHARACTERISTICS.TRIGGER_LOAD
         ),
+        BleClient.read(
+          props.device.deviceId,
+          SERVICES.TRIGGER,
+          CHARACTERISTICS.TRIGGER_FLASHLIGHT
+        ),
       ]),
     [props.device.deviceId]
   );
@@ -104,9 +120,10 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
         setPVVoltage(data[1].getFloat32(0, true));
         setPVCurrent(data[2].getFloat32(0, true));
         setPVPower(data[3].getUint16(0, true));
-        const loadActive = data[4].getUint8(0) !== 0 ? true : false;
+        const loadActive = data[4].getUint16(0) !== 0 ? true : false;
         console.log("Confirm load active:", loadActive);
         setLoadActive(loadActive);
+        setFlashlightOn(data[5].getUint16(0) !== 0 ? true : false);
       };
 
       const interval = setInterval(sync, 500);
@@ -163,6 +180,16 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
               onClick={() => onTriggerLoad(!loadActive)}
             >
               <IonIcon icon={power}></IonIcon>
+            </IonButton>
+          </IonItem>
+          <IonItem>
+            <IonLabel>Flashlight</IonLabel>
+            <IonButton
+              size="large"
+              color={flashlightOn ? "danger" : "primary"}
+              onClick={() => onTriggerFlashlight(!flashlightOn)}
+            >
+              <IonIcon icon={flashlightOn ? flashOff : flash}></IonIcon>
             </IonButton>
           </IonItem>
         </IonContent>
