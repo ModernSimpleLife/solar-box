@@ -75,7 +75,7 @@ public:
 
     virtual void onWrite(BLECharacteristic *pCharacteristic, esp_ble_gatts_cb_param_t *param)
     {
-        this->loadController.trigger(*(bool *)pCharacteristic->getData());
+        this->loadController.enable(*(bool *)pCharacteristic->getData());
     }
 
     void update()
@@ -87,6 +87,9 @@ public:
         if (this->clientConnectedCount > 0)
         {
             this->publisher.publish(state);
+            uint16_t loadControllerEnabled = this->loadController.isEnabled() ? 1 : 0;
+            this->pTriggerLoadCharacteristic->setValue(loadControllerEnabled);
+            this->pTriggerLoadCharacteristic->notify();
         }
     }
 } solarBox;

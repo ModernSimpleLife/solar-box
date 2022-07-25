@@ -156,7 +156,7 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
           </IonList>
 
           <IonItem>
-            <IonLabel>Load</IonLabel>
+            <IonLabel>Load Controller</IonLabel>
             <IonButton
               size="large"
               color={loadActive ? "danger" : "primary"}
