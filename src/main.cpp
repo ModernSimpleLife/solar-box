@@ -1,9 +1,16 @@
+// #define ENABLE_OTA
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
 #include <Arduino.h>
 #include <ModbusMaster.h>
 #include <SoftwareSerial.h>
+#ifdef ENABLE_OTA
+#include <WiFi.h>
+#include <ESPAsyncWebServer.h>
+#include <AsyncElegantOTA.h>
+#endif
+#include <ESPmDNS.h>
 #include "ChargeController.h"
 #include "LoadController.h"
 #include "Publisher.h"
@@ -13,6 +20,12 @@
 #define RS232_RX_PIN 13
 #define RELAY_PIN 15
 SoftwareSerial rs232Serial(RS232_RX_PIN, RS232_TX_PIN);
+
+#ifdef ENABLE_OTA
+const char *WIFI_SSID = "Herman";
+const char *WIFI_PASS = "pooppoop";
+AsyncWebServer otaServer(80);
+#endif
 
 class SolarBox : public BLEServerCallbacks, public BLECharacteristicCallbacks
 {
@@ -98,6 +111,29 @@ void setup()
 {
     Serial.begin(9600);
     Serial.println("Starting solar charge monitor");
+
+#ifdef ENABLE_OTA
+    WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(true);
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
+    // Wait for connection
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(500);
+        Serial.print(".");
+    }
+
+    if (!MDNS.begin("esp32"))
+    {
+        Serial.println("Error setting up MDNS responder!");
+    }
+
+    AsyncElegantOTA.begin(&otaServer);
+    otaServer.begin();
+    // Add service to MDNS-SD
+    MDNS.addService("http", "tcp", 80);
+#endif
+
     solarBox.begin();
 }
 
