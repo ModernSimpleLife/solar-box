@@ -3,8 +3,7 @@
 #include "ChargeController.h"
 
 #define LOAD_PV_WATT_CUTOFF 10
-// #define LOAD_TIMEOUT_IN_MILLIS ((uint64_t)1 * 60 * 60 * 1000)
-#define LOAD_TIMEOUT_IN_MILLIS ((uint64_t)5 * 1000)
+#define LOAD_TIMEOUT_IN_MILLIS ((uint64_t)1 * 60 * 60 * 1000)
 
 class LoadController
 {
