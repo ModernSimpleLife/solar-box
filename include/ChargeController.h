@@ -9,7 +9,7 @@ public:
     float pvCurrent = 0.0;
     uint16_t pvPower = 0;
     float batteryVoltage = 0.0;
-    float batterySOC = 0.0;
+    uint16_t batterySOC = 0.0;
 };
 
 class ChargeController

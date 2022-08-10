@@ -3,7 +3,10 @@
 #include "ChargeController.h"
 
 #define LOAD_PV_WATT_CUTOFF 10
-#define LOAD_TIMEOUT_IN_MILLIS ((uint64_t)1 * 60 * 60 * 1000)
+#define BATTERY_SOC_CUTOFF 15
+#define HOUR_IN_MILLIS ((uint64_t)1 * 60 * 60 * 1000)
+#define LOAD_TIMEOUT_IN_MILLIS (1 * HOUR_IN_MILLIS)
+#define LOAD_ACTIVATE_DELAY_IN_MILLIS (2 * HOUR_IN_MILLIS)
 
 class LoadController
 {
@@ -15,6 +18,7 @@ public:
 
 private:
     uint64_t lastActivatedAt = 0;
+    uint64_t lastDeativatedAt = 0;
     uint8_t loadPin;
     bool enabled = true;
     void trigger(bool activate);

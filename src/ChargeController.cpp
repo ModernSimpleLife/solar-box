@@ -44,6 +44,8 @@ void RenogyChargeController::update()
     float voltage = static_cast<float>(value) * 0.1;
     Serial.printf("Got battery voltage: %u (0x%02x)\n", value, result);
     this->currentState.batteryVoltage = voltage;
+    this->currentState.batterySOC = voltageToSOC(value);
+    Serial.printf("Got battery SOC: %u (0x%02x)\n", this->currentState.batterySOC, result);
 
     // PV Voltage
     result = node.readHoldingRegisters(0x107, 2);

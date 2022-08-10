@@ -1,5 +1,11 @@
 #include "LoadController.h"
 
+/**
+ * DISABLED -> ENABLED
+ *                |> LOW_BATTERY
+ *                |> LOW_PV_INPUT
+ */
+
 void LoadController::begin(uint8_t loadPin)
 {
     this->loadPin = loadPin;
@@ -47,8 +53,8 @@ void LoadController::update(ChargeControllerState &state)
     }
     else
     {
-        uint64_t elapsed = millis() - this->lastActivatedAt;
-        if (elapsed > LOAD_TIMEOUT_IN_MILLIS)
+        uint64_t delaySinceActivated = millis() - this->lastActivatedAt;
+        if (delaySinceActivated > LOAD_TIMEOUT_IN_MILLIS)
         {
             this->trigger(false);
         }

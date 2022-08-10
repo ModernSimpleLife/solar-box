@@ -36,13 +36,17 @@ void BLEPublisher::publish(ChargeControllerState &state)
 {
     this->pBatteryLevelCharacteristic->setValue(state.batterySOC);
     this->pBatteryLevelCharacteristic->notify();
+    printf("Published battery SOC: %u%%\n", state.batterySOC);
 
     this->pPVVoltageCharacteristic->setValue(state.pvVoltage);
     this->pPVVoltageCharacteristic->notify();
+    printf("Published PV Voltage: %.2fV\n", state.pvVoltage);
 
     this->pPVCurrentCharacteristic->setValue(state.pvCurrent);
     this->pPVCurrentCharacteristic->notify();
+    printf("Published PV Current: %.2fA\n", state.pvCurrent);
 
     this->pPVPowerCharacteristic->setValue(state.pvPower);
     this->pPVPowerCharacteristic->notify();
+    printf("Published PV Power: %uW\n", state.pvPower);
 }

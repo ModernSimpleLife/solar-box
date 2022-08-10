@@ -1,4 +1,6 @@
 // #define ENABLE_OTA
+// #include <soc/soc.h>
+// #include <soc/rtc_cntl_reg.h>
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
@@ -9,8 +11,8 @@
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncElegantOTA.h>
-#endif
 #include <ESPmDNS.h>
+#endif
 #include "ChargeController.h"
 #include "LoadController.h"
 #include "Publisher.h"
@@ -19,7 +21,6 @@
 #define RS232_TX_PIN 12
 #define RS232_RX_PIN 13
 #define RELAY_PIN 15
-#define INDICATOR_PIN 33
 #define FLASHLIGHT_PIN 4
 SoftwareSerial rs232Serial(RS232_RX_PIN, RS232_TX_PIN);
 
@@ -57,6 +58,7 @@ public:
     {
         BLECharacteristic *pCharacteristic;
         loadController.begin(RELAY_PIN);
+        rs232Serial.begin(9600, SWSERIAL_8N1);
         chargeController.begin(rs232Serial);
 
         BLEDevice::init(PROJECT_NAME);
@@ -98,7 +100,7 @@ public:
     {
         this->clientConnectedCount++;
         pServer->startAdvertising();
-        Serial.printf("Client got connected. %u clients are connected", this->clientConnectedCount);
+        Serial.printf("Client got connected. %u clients are connected\n", this->clientConnectedCount);
     }
 
     virtual void onDisconnect(BLEServer *pServer)
@@ -121,24 +123,22 @@ public:
         if (this->clientConnectedCount > 0)
         {
             // the built-in red led works with inverted signals
-            digitalWrite(INDICATOR_PIN, LOW);
             this->publisher.publish(state);
             uint16_t loadControllerEnabled = this->loadController.isEnabled() ? 1 : 0;
+            printf("Load is %s\n", this->loadController.isEnabled() ? "ENABLED" : "DISABLED");
             this->pTriggerLoadCharacteristic->setValue(loadControllerEnabled);
             this->pTriggerLoadCharacteristic->notify();
-        }
-        else
-        {
-            digitalWrite(INDICATOR_PIN, HIGH);
         }
     }
 } solarBox;
 
 void setup()
 {
+    // WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+    setCpuFrequencyMhz(80);
     Serial.begin(9600);
+    Serial.printf("Set CPU frequency to %u Mhz\n", getCpuFrequencyMhz());
     Serial.println("Starting solar charge monitor");
-    pinMode(INDICATOR_PIN, OUTPUT);
     pinMode(FLASHLIGHT_PIN, OUTPUT);
 
 #ifdef ENABLE_OTA
