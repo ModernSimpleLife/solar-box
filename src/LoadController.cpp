@@ -1,11 +1,5 @@
 #include "LoadController.h"
 
-/**
- * DISABLED -> ENABLED
- *                |> LOW_BATTERY
- *                |> LOW_PV_INPUT
- */
-
 void LoadController::begin(uint8_t loadPin)
 {
     this->loadPin = loadPin;
@@ -17,46 +11,97 @@ void LoadController::trigger(bool activate)
 {
     Serial.printf("Load is %s\n", activate ? "ACTIVE" : "INACTIVE");
     digitalWrite(this->loadPin, activate ? LOW : HIGH);
-
-    if (activate)
-    {
-        this->lastActivatedAt = millis();
-    }
 }
 
 void LoadController::enable(bool flag)
 {
-    Serial.printf("Load is %s\n", flag ? "ENABLED" : "DISABLED");
-    this->enabled = flag;
+    if (flag)
+    {
+        if (this->state != LoadControllerState::Disabled)
+        {
+            return;
+        }
 
-    // If disabled, turn off load immediately. The controller won't close the relay.
-    // Else, close the relay and let the future update logic to decide when to turn off.
-    // When there's no input, the relay will at least be closed for LOAD_TIMEOUT_IN_MILLIS
-    this->trigger(flag);
+        this->trigger(true);
+        this->lastHighPVInputAt = millis();
+        this->lastErrorAt = 0;
+        this->state = LoadControllerState::Enabled;
+    }
+    else
+    {
+        this->trigger(false);
+        this->state = LoadControllerState::Disabled;
+    }
 }
 
 bool LoadController::isEnabled()
 {
-    return this->enabled;
+    return this->state != LoadControllerState::Disabled;
 }
 
 void LoadController::update(ChargeControllerState &state)
 {
-    if (!this->enabled)
+    LoadControllerState nextState = this->state;
+
+    switch (this->state)
+    {
+    case LoadControllerState::Disabled:
+        break;
+    case LoadControllerState::Enabled:
+        if (state.batterySOC < BATTERY_SOC_CUTOFF)
+        {
+            nextState = LoadControllerState::LOW_BATTERY;
+        }
+        else if (state.pvPower < LOAD_PV_WATT_CUTOFF)
+        {
+            uint64_t delaySinceLastHighPVInput = millis() - this->lastHighPVInputAt;
+            if (delaySinceLastHighPVInput > LOAD_TIMEOUT_IN_MILLIS)
+            {
+                nextState = LoadControllerState::LOW_PV_INPUT;
+            }
+        }
+        else
+        {
+            this->lastHighPVInputAt = millis();
+        }
+        break;
+    case LoadControllerState::LOW_BATTERY:
+        if (state.batterySOC >= BATTERY_SOC_CUTOFF)
+        {
+            nextState = LoadControllerState::Enabled;
+        }
+        break;
+    case LoadControllerState::LOW_PV_INPUT:
+        if (state.pvPower >= LOAD_PV_WATT_CUTOFF)
+        {
+            nextState = LoadControllerState::Enabled;
+        }
+        break;
+    }
+
+    if (nextState == this->state)
     {
         return;
     }
 
-    if (state.pvPower > LOAD_PV_WATT_CUTOFF)
+    if (nextState == LoadControllerState::LOW_BATTERY || nextState == LoadControllerState::LOW_PV_INPUT)
     {
-        this->trigger(true);
+        this->lastErrorAt = millis();
+        this->trigger(false);
     }
-    else
+    else if (nextState == LoadControllerState::Enabled)
     {
-        uint64_t delaySinceActivated = millis() - this->lastActivatedAt;
-        if (delaySinceActivated > LOAD_TIMEOUT_IN_MILLIS)
+        uint64_t delaySinceLastError = millis() - this->lastErrorAt;
+        if (delaySinceLastError > DELAY_AFTER_ERROR_IN_MILLIS)
         {
-            this->trigger(false);
+            this->trigger(true);
+        }
+        else
+        {
+            // Within error delay window, cancel state transition
+            nextState = this->state;
         }
     }
+
+    this->state = nextState;
 }
