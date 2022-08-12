@@ -35,6 +35,7 @@ const CHARACTERISTICS = {
   PV_CURRENT: "91b3d4db-550b-464f-8127-16eeb209dd1d",
   PV_POWER: "2c85bbb9-0e1a-4bbb-8315-f7cc29831515",
   TRIGGER_LOAD: "287651ed-3fda-42f4-92c6-7aaca7da634c",
+  TRIGGER_STATE: "287651ed-3fda-42f4-92c6-7aaca7da634d",
   // Web bluetooth somehow can't detect this GATT.... WHY?
   TRIGGER_FLASHLIGHT: "c660aa6e-38f4-446b-b5eb-af6140864610",
 };
@@ -50,6 +51,7 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
   const [pvVoltage, setPVVoltage] = useState(0);
   const [pvCurrent, setPVCurrent] = useState(0);
   const [pvPower, setPVPower] = useState(0);
+  const [triggerState, setTriggerState] = useState("-");
 
   const onTriggerLoad = async (checked: boolean) => {
     console.log(`Trigger ${checked}`);
@@ -98,6 +100,11 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
           SERVICES.TRIGGER,
           CHARACTERISTICS.TRIGGER_LOAD
         ),
+        BleClient.read(
+          props.device.deviceId,
+          SERVICES.TRIGGER,
+          CHARACTERISTICS.TRIGGER_STATE
+        ),
         // BleClient.read(
         //   props.device.deviceId,
         //   SERVICES.TRIGGER,
@@ -123,6 +130,7 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
         setPVPower(data[3].getUint16(0, true));
         const loadActive = data[4].getUint8(0) !== 0 ? true : false;
         setLoadActive(loadActive);
+        setTriggerState(new TextDecoder().decode(data[5].buffer));
         // setFlashlightOn(data[5].getUint16(0) !== 0 ? true : false);
       };
 
@@ -169,6 +177,10 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
             <IonItem>
               <IonLabel>Battery Level</IonLabel>
               <IonLabel>{batteryLevel}%</IonLabel>
+            </IonItem>
+            <IonItem>
+              <IonLabel>State</IonLabel>
+              <IonLabel>{triggerState}</IonLabel>
             </IonItem>
           </IonList>
 

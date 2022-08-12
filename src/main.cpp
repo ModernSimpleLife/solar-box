@@ -47,6 +47,7 @@ private:
     BLEService *pTriggerService;
     BLECharacteristic *pTriggerLoadCharacteristic;
     BLECharacteristic *pTriggerFlashlightCharacteristic;
+    BLECharacteristic *pTriggerStateCharacteristic;
     FlashlightCallback flashlightCb;
     uint8_t clientConnectedCount = 0;
     LoadController loadController;
@@ -80,12 +81,18 @@ public:
                                                                                                  BLECharacteristic::PROPERTY_READ |
                                                                                                  BLECharacteristic::PROPERTY_NOTIFY);
         this->pTriggerFlashlightCharacteristic->setCallbacks(&flashlightCb);
+
+        this->pTriggerStateCharacteristic = this->pTriggerService->createCharacteristic(BLEUUID("287651ed-3fda-42f4-92c6-7aaca7da634d"),
+                                                                                        BLECharacteristic::PROPERTY_READ |
+                                                                                            BLECharacteristic::PROPERTY_NOTIFY);
         this->pTriggerService->addCharacteristic(this->pTriggerLoadCharacteristic);
         this->pTriggerService->addCharacteristic(this->pTriggerFlashlightCharacteristic);
+        this->pTriggerService->addCharacteristic(this->pTriggerStateCharacteristic);
         this->pTriggerService->start();
         uint16_t value = 0;
         this->pTriggerLoadCharacteristic->setValue(value);
         this->pTriggerFlashlightCharacteristic->setValue(value);
+        this->pTriggerStateCharacteristic->setValue(this->loadController.getState());
 
         BLEAdvertising *pAdvertising = this->pServer->getAdvertising();
         pAdvertising->addServiceUUID(this->pTriggerService->getUUID());
@@ -124,10 +131,12 @@ public:
         {
             // the built-in red led works with inverted signals
             this->publisher.publish(state);
-            uint16_t loadControllerEnabled = this->loadController.isEnabled() ? 1 : 0;
-            printf("Load is %s\n", this->loadController.isEnabled() ? "ENABLED" : "DISABLED");
+            uint16_t loadControllerEnabled = this->loadController.isActive() ? 1 : 0;
+            printf("Load is %s\n", this->loadController.isActive() ? "ENABLED" : "DISABLED");
             this->pTriggerLoadCharacteristic->setValue(loadControllerEnabled);
             this->pTriggerLoadCharacteristic->notify();
+            this->pTriggerStateCharacteristic->setValue(this->loadController.getState());
+            this->pTriggerStateCharacteristic->notify();
         }
     }
 } solarBox;

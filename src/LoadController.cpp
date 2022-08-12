@@ -1,10 +1,27 @@
 #include "LoadController.h"
 
+static const char *stateToStr(LoadControllerState state)
+{
+    static const char *table[] = {
+        "INACTIVE",
+        "ACTIVE",
+        "LOW_PV_INPUT",
+        "LOW_BATTERY",
+    };
+
+    return table[state];
+}
+
 void LoadController::begin(uint8_t loadPin)
 {
     this->loadPin = loadPin;
     pinMode(loadPin, OUTPUT);
     this->enable(true);
+}
+
+const char *LoadController::getState()
+{
+    return stateToStr(this->state);
 }
 
 void LoadController::trigger(bool activate)
@@ -17,7 +34,7 @@ void LoadController::enable(bool flag)
 {
     if (flag)
     {
-        if (this->state != LoadControllerState::Disabled)
+        if (this->state != LoadControllerState::INACTIVE)
         {
             return;
         }
@@ -25,18 +42,18 @@ void LoadController::enable(bool flag)
         this->trigger(true);
         this->lastHighPVInputAt = millis();
         this->lastErrorAt = 0;
-        this->state = LoadControllerState::Enabled;
+        this->state = LoadControllerState::ACTIVE;
     }
     else
     {
         this->trigger(false);
-        this->state = LoadControllerState::Disabled;
+        this->state = LoadControllerState::INACTIVE;
     }
 }
 
-bool LoadController::isEnabled()
+bool LoadController::isActive()
 {
-    return this->state != LoadControllerState::Disabled;
+    return this->state != LoadControllerState::INACTIVE;
 }
 
 void LoadController::update(ChargeControllerState &state)
@@ -45,9 +62,9 @@ void LoadController::update(ChargeControllerState &state)
 
     switch (this->state)
     {
-    case LoadControllerState::Disabled:
+    case LoadControllerState::INACTIVE:
         break;
-    case LoadControllerState::Enabled:
+    case LoadControllerState::ACTIVE:
         if (state.batterySOC < BATTERY_SOC_CUTOFF)
         {
             nextState = LoadControllerState::LOW_BATTERY;
@@ -68,13 +85,13 @@ void LoadController::update(ChargeControllerState &state)
     case LoadControllerState::LOW_BATTERY:
         if (state.batterySOC >= BATTERY_SOC_CUTOFF)
         {
-            nextState = LoadControllerState::Enabled;
+            nextState = LoadControllerState::ACTIVE;
         }
         break;
     case LoadControllerState::LOW_PV_INPUT:
         if (state.pvPower >= LOAD_PV_WATT_CUTOFF)
         {
-            nextState = LoadControllerState::Enabled;
+            nextState = LoadControllerState::ACTIVE;
         }
         break;
     }
@@ -89,7 +106,7 @@ void LoadController::update(ChargeControllerState &state)
         this->lastErrorAt = millis();
         this->trigger(false);
     }
-    else if (nextState == LoadControllerState::Enabled)
+    else if (nextState == LoadControllerState::ACTIVE)
     {
         uint64_t delaySinceLastError = millis() - this->lastErrorAt;
         if (delaySinceLastError > DELAY_AFTER_ERROR_IN_MILLIS)
@@ -103,5 +120,6 @@ void LoadController::update(ChargeControllerState &state)
         }
     }
 
+    printf("Changing state from %s to %s\n", stateToStr(this->state), stateToStr(nextState));
     this->state = nextState;
 }

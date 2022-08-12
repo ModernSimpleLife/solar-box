@@ -45,6 +45,7 @@ void RenogyChargeController::update()
     Serial.printf("Got battery voltage: %u (0x%02x)\n", value, result);
     this->currentState.batteryVoltage = voltage;
     this->currentState.batterySOC = voltageToSOC(value);
+    this->currentState.batterySOC = 100;
     Serial.printf("Got battery SOC: %u (0x%02x)\n", this->currentState.batterySOC, result);
 
     // PV Voltage
@@ -64,6 +65,6 @@ void RenogyChargeController::update()
     // PV Power
     result = node.readHoldingRegisters(0x109, 2);
     value = result == node.ku8MBSuccess ? node.getResponseBuffer(0) : 0;
-    Serial.printf("Got pv power: %u (0x%02x)\n", value, result);
     this->currentState.pvPower = value;
+    Serial.printf("Got pv power: %u (0x%02x)\n", value, result);
 }
