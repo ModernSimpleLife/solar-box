@@ -2,7 +2,7 @@
   "name": "mobile",
   "version": "0.0.1",
   "private": true,
-  "homepage": "https://modernsimplelife.github.io/solar-charge-controller",
+  "homepage": "https://modernsimplelife.github.io/solar-box",
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^1.8.3",
     "@capacitor/android": "^3.6.0",
