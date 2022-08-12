@@ -45,7 +45,6 @@ void RenogyChargeController::update()
     Serial.printf("Got battery voltage: %u (0x%02x)\n", value, result);
     this->currentState.batteryVoltage = voltage;
     this->currentState.batterySOC = voltageToSOC(value);
-    this->currentState.batterySOC = 100;
     Serial.printf("Got battery SOC: %u (0x%02x)\n", this->currentState.batterySOC, result);
 
     // PV Voltage
