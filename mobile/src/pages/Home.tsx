@@ -196,7 +196,7 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
               <IonIcon icon={power}></IonIcon>
             </IonButton>
           </IonItem>
-          <p>Last updated at {Math.round((new Date() - lastUpdatedAt) / 1000)} seconds ago</p>
+          <p>Last updated at {Math.round(((new Date()) - lastUpdatedAt) / 1000)} seconds ago</p>
           {/* <IonItem>
             <IonLabel>Flashlight</IonLabel>
             <IonButton
