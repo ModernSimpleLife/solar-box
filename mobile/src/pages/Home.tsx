@@ -52,6 +52,7 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
   const [pvCurrent, setPVCurrent] = useState(0);
   const [pvPower, setPVPower] = useState(0);
   const [triggerState, setTriggerState] = useState("-");
+  const [lastUpdatedAt,setLastUpdatedAt] = useState(new Date());
 
   const onTriggerLoad = async (checked: boolean) => {
     console.log(`Trigger ${checked}`);
@@ -132,6 +133,7 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
         setLoadActive(loadActive);
         setTriggerState(new TextDecoder().decode(data[5].buffer));
         // setFlashlightOn(data[5].getUint16(0) !== 0 ? true : false);
+        setLastUpdatedAt(new Date());
       };
 
       const interval = setInterval(sync, 500);
@@ -194,6 +196,7 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
               <IonIcon icon={power}></IonIcon>
             </IonButton>
           </IonItem>
+          <p>Last updated at {Math.round((new Date() - lastUpdatedAt) / 1000)} seconds ago</p>
           {/* <IonItem>
             <IonLabel>Flashlight</IonLabel>
             <IonButton
