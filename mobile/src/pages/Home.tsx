@@ -54,7 +54,7 @@ const SolarBox: React.FC<SolarBoxProps> = (props) => {
   const [triggerState, setTriggerState] = useState("-");
   const [lastUpdatedAt,setLastUpdatedAt] = useState(new Date());
   const now = new Date();
-  const sinceLastUpdated = now - lastUpdatedAt;
+  const sinceLastUpdated = now.valueOf() - lastUpdatedAt.valueOf();
   const sinceLastUpdatedInSeconds = sinceLastUpdated / 1000;
 
   const onTriggerLoad = async (checked: boolean) => {
