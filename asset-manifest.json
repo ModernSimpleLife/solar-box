@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/solar-box/static/css/main.8338a2d4.css",
-    "main.js": "/solar-box/static/js/main.d9249fe5.js",
+    "main.js": "/solar-box/static/js/main.ee6a7678.js",
     "static/js/630.fee76cf4.chunk.js": "/solar-box/static/js/630.fee76cf4.chunk.js",
     "static/js/858.ab105bc8.chunk.js": "/solar-box/static/js/858.ab105bc8.chunk.js",
     "static/js/372.3d2a7203.chunk.js": "/solar-box/static/js/372.3d2a7203.chunk.js",
@@ -16,7 +16,7 @@
     "service-worker.js": "/solar-box/service-worker.js",
     "index.html": "/solar-box/index.html",
     "main.8338a2d4.css.map": "/solar-box/static/css/main.8338a2d4.css.map",
-    "main.d9249fe5.js.map": "/solar-box/static/js/main.d9249fe5.js.map",
+    "main.ee6a7678.js.map": "/solar-box/static/js/main.ee6a7678.js.map",
     "630.fee76cf4.chunk.js.map": "/solar-box/static/js/630.fee76cf4.chunk.js.map",
     "858.ab105bc8.chunk.js.map": "/solar-box/static/js/858.ab105bc8.chunk.js.map",
     "372.3d2a7203.chunk.js.map": "/solar-box/static/js/372.3d2a7203.chunk.js.map",
@@ -31,6 +31,6 @@
   },
   "entrypoints": [
     "static/css/main.8338a2d4.css",
-    "static/js/main.d9249fe5.js"
+    "static/js/main.ee6a7678.js"
   ]
 }
