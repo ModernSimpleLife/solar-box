@@ -18,7 +18,7 @@
 #include "Publisher.h"
 
 #define PROJECT_NAME "Solar Box"
-#define MODEL_ESP32_CAM
+#define MODEL_ESP32_C3
 
 #ifdef MODEL_ESP32_CAM
 #define RS232_TX_PIN 12
@@ -27,9 +27,9 @@
 #endif
 
 #ifdef MODEL_ESP32_C3
-#define RS232_TX_PIN 1
-#define RS232_RX_PIN 2
-#define RELAY_PIN 3
+#define RS232_TX_PIN 6
+#define RS232_RX_PIN 7
+#define RELAY_PIN 9
 #endif
 
 SoftwareSerial rs232Serial(RS232_RX_PIN, RS232_TX_PIN);
@@ -134,7 +134,6 @@ public:
 void setup()
 {
     // WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
-    setCpuFrequencyMhz(80);
     Serial.begin(9600);
     Serial.printf("Set CPU frequency to %u Mhz\n", getCpuFrequencyMhz());
     Serial.println("Starting solar charge monitor");

@@ -12,6 +12,10 @@ static uint16_t voltageToSOC(uint16_t voltage)
         {129, 20},
         {128, 17},
         {125, 14},
+        {124, 13},
+        {123, 12},
+        {122, 11},
+        {121, 10},
         {120, 9},
         {100, 0},
     };
@@ -37,33 +41,45 @@ void RenogyChargeController::update()
 {
     uint8_t result;
     uint16_t value = 0;
+    float voltage = 0;
 
     // Battery Voltage
     result = node.readHoldingRegisters(0x101, 2);
-    value = result == node.ku8MBSuccess ? node.getResponseBuffer(0) : 0;
-    float voltage = static_cast<float>(value) * 0.1;
+    if (result == node.ku8MBSuccess)
+    {
+        value = node.getResponseBuffer(0);
+        voltage = static_cast<float>(value) * 0.1;
+        this->currentState.batteryVoltage = voltage;
+        this->currentState.batterySOC = voltageToSOC(value);
+    }
     Serial.printf("Got battery voltage: %u (0x%02x)\n", value, result);
-    this->currentState.batteryVoltage = voltage;
-    this->currentState.batterySOC = voltageToSOC(value);
-    Serial.printf("Got battery SOC: %u (0x%02x)\n", this->currentState.batterySOC, result);
 
     // PV Voltage
     result = node.readHoldingRegisters(0x107, 2);
-    value = result == node.ku8MBSuccess ? node.getResponseBuffer(0) : 0;
+    if (result == node.ku8MBSuccess)
+    {
+        value = node.getResponseBuffer(0);
+        voltage = static_cast<float>(value) * 0.1;
+        this->currentState.pvVoltage = voltage;
+    }
     Serial.printf("Got pv voltage: %u (0x%02x)\n", value, result);
-    voltage = static_cast<float>(value) * 0.1;
-    this->currentState.pvVoltage = voltage;
 
     // PV Current
     result = node.readHoldingRegisters(0x108, 2);
-    value = result == node.ku8MBSuccess ? node.getResponseBuffer(0) : 0;
+    if (result == node.ku8MBSuccess)
+    {
+        value = node.getResponseBuffer(0);
+        float current = static_cast<float>(value) * 0.01;
+        this->currentState.pvCurrent = current;
+    }
     Serial.printf("Got pv current: %u (0x%02x)\n", value, result);
-    float current = static_cast<float>(value) * 0.01;
-    this->currentState.pvCurrent = current;
 
     // PV Power
     result = node.readHoldingRegisters(0x109, 2);
-    value = result == node.ku8MBSuccess ? node.getResponseBuffer(0) : 0;
-    this->currentState.pvPower = value;
+    if (result == node.ku8MBSuccess)
+    {
+        value = node.getResponseBuffer(0);
+        this->currentState.pvPower = value;
+    }
     Serial.printf("Got pv power: %u (0x%02x)\n", value, result);
 }
